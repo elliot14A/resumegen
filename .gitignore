@@ -1,0 +1,30 @@
+# Build artifacts & Cargo
+/target/
+result
+result-*
+
+# Compiled binaries
+/scripts/resumegen
+.agents/**/scripts/resumegen
+
+# Candidate-specific data & generated documents
+/master_resume.yaml
+/.resumegen/
+*.pdf
+*.tex.bak
+
+# LaTeX auxiliary compilation files
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Local IDE and agent scratch files
+.planning/
+.system_generated/
+*.swp
+*.swo
+*~
+.DS_Store
