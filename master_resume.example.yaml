@@ -1,0 +1,71 @@
+candidate:
+  name: "Jane Doe"
+  title: "Senior Backend Engineer"
+  location: "Berlin, Germany"
+  email: "jane.doe@example.com"
+  phone: "+49 151 12345678"
+  links:
+    portfolio: "https://janedoe.dev"
+    portfolio_display: "janedoe.dev"
+    github: "https://github.com/janedoe"
+    github_display: "github.com/janedoe"
+    linkedin: "https://linkedin.com/in/janedoe"
+    linkedin_display: "linkedin.com/in/janedoe"
+  # OPTIONAL: Candidate relocation & work authorization
+  relocation:
+    enabled: false # set true if open to relocation
+    target: "Berlin, Germany"
+    header_tag: "Open to relocation to Germany"
+    custom_statement: "I am based in Berlin and eligible to work in the EU without visa sponsorship."
+    work_authorization: "EU Citizen"
+    spoken_languages: "English (Fluent) · German (B2)"
+
+# OPTIONAL: Custom Quality Checks & Invariant Controls
+custom_checks:
+  verify_institution: true
+  max_resume_pages: 2
+  max_cover_letter_pages: 1
+  banned_words: ["genuinely", "honestly", "actually", "thrilled", "passionate", "excited", "leverage"]
+
+summary_bank:
+  - id: "backend_systems_focus"
+    focus: "Backend Systems, Distributed Engines & Go/Rust"
+    text: "Senior backend engineer with deep production experience in Go, Rust, PostgreSQL, and distributed data systems. Passionate about owning products end-to-end and setting high engineering standards."
+
+experience:
+  - id: "acme_corp"
+    company: "Acme Corp"
+    company_url: "https://acmeworks.example.com"
+    role: "Senior Backend Engineer"
+    dates: "01/2024 -- present"
+    location: "Berlin, Germany · distributed infrastructure"
+    bullets:
+      - id: "acme_lead"
+        tags: ["go", "postgres", "distributed_systems"]
+        text: "Owned core backend microservices in Go, cutting API response latency from 450ms to 45ms."
+      - id: "acme_auth"
+        tags: ["security", "auth", "iam"]
+        text: "Designed zero-trust authorization pipelines evaluating request contexts directly in the query execution path."
+
+projects:
+  - id: "fastkv"
+    name: "fastkv"
+    url: "https://github.com/janedoe/fastkv"
+    repo_url: "https://github.com/janedoe/fastkv"
+    repo_display: "github.com/janedoe/fastkv"
+    stack: ["Rust", "Raft", "Tokio"]
+    summary: "author. High-performance distributed key-value store in Rust implementing the Raft consensus algorithm with asynchronous disk I/O."
+
+skills:
+  categories:
+    - name: "Languages"
+      items: ["Go", "Rust", "TypeScript", "SQL", "Python", "Bash"]
+    - name: "Backend & Systems"
+      items: ["gRPC", "PostgreSQL", "Redis", "Kafka", "Docker", "Kubernetes", "Linux"]
+
+education:
+  - institution: "Technical University of Munich"
+    degree: "Bachelor of Science in Computer Science"
+    dates: "2018 -- 2022"
+    location: "Munich, Germany"
+    details: "Languages: English (Fluent) · German (B2)"
