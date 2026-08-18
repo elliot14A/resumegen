@@ -1,0 +1,18 @@
+Role: Senior Rust Systems Engineer
+Company: Helsing
+Location: Berlin, Germany (Relocation assistance & EU Blue Card sponsorship provided)
+
+About the Role:
+Helsing is building real-time live processing platforms for sensor fusion, defense, and edge telemetry. We are looking for a Senior Systems Engineer to architect and optimize low-latency data pipelines and distributed services in Rust.
+
+Key Responsibilities:
+- Design and build mission-critical, high-throughput microservices in Rust using async runtimes (Tokio, tonic gRPC).
+- Implement storage and query pipelines over columnar and transactional backends (DuckDB, ClickHouse, PostgreSQL).
+- Maintain rigorous multi-tenant security boundaries, access controls, and verifiable audit logging.
+- Set high engineering standards for code reviews, testing, profiling, and observability across the team.
+
+Requirements:
+- Strong production experience with Rust, async programming, and gRPC microservice architectures.
+- Experience with high-cardinality streaming data and columnar analytical engines (Arrow, DataFusion, ClickHouse, or DuckDB).
+- Background in Linux, Docker, container orchestration, and declarative infrastructure (Nix/NixOS is a plus).
+- Passion for software craftsmanship, reliability, and clean system design.
