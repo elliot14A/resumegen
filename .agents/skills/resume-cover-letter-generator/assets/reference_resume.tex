@@ -1,0 +1,143 @@
+\documentclass[10pt,a4paper]{article}
+
+% --- ATS-Safe Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.6in,top=0.52in,bottom=0.52in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+% --- Color Definitions ---
+\definecolor{primary}{RGB}{23, 51, 79}        % Deep Navy
+\definecolor{darktext}{RGB}{26, 26, 26}       % Off-black for body
+\definecolor{meta}{RGB}{74, 90, 104}          % Charcoal meta text
+\definecolor{linkblue}{RGB}{0, 0, 158}        % Clickable link blue
+
+% --- Hyperlink Setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkblue,
+    urlcolor=linkblue,
+    pdfauthor={Akshith Katkuri},
+    pdftitle={Akshith Katkuri - Resume}
+}
+
+% --- Typography & Margins ---
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\color{darktext}
+
+% --- Section Styling (ATS-Compliant Headers) ---
+\titleformat{\section}
+  {\color{primary}\fontsize{10.5pt}{12pt}\bfseries\uppercase}
+  {}{0em}{}[\vspace{1.5pt}\titlerule\vspace{3.5pt}]
+\titlespacing*{\section}{0pt}{8pt}{3.5pt}
+
+% --- Custom List Formatting ---
+\setlist[itemize]{
+  leftmargin=12pt,
+  labelsep=5pt,
+  itemsep=2pt,
+  topsep=1.5pt,
+  parsep=0pt,
+  partopsep=0pt,
+  label={\small\textbullet}
+}
+
+% --- Helper Macros ---
+\newcommand{\entryheader}[4]{
+  \noindent\textbf{\color{primary}#1} \hfill {\small\color{meta}#2}\\
+  \textit{\small #3} \hfill {\small\color{meta}#4}\vspace{2pt}
+}
+
+\newcommand{\subentryheader}[2]{
+  \noindent\textbf{\color{primary}\textit{\small #1}} \hfill {\small\color{meta}#2}\vspace{1.5pt}
+}
+
+\begin{document}
+
+% --- Header ---
+\begin{center}
+  {\fontsize{18pt}{20pt}\selectfont \textbf{\color{primary}AKSHITH KATKURI}}\\[3pt]
+  {\fontsize{11pt}{13pt}\selectfont \textbf{\color{primary}Senior Software Engineer}}\\[3pt]
+  {\small Hyderabad, India $\cdot$ Open to relocation to Berlin $\cdot$ +91 93904 31427 $\cdot$ \href{mailto:akshithkatkuri14@gmail.com}{akshithkatkuri14@gmail.com}}\\[2.5pt]
+  {\small \href{https://elliot14a.work}{elliot14a.work} \ \textbf{|} \ \href{https://github.com/elliot14A}{github.com/elliot14A} \ \textbf{|} \ \href{https://linkedin.com/in/akshith-katkuri-14am}{linkedin.com/in/akshith-katkuri-14am}}
+\end{center}
+\vspace{-2pt}
+
+% --- Summary ---
+\section*{Summary}
+Backend and distributed systems engineer who owns features from concept to production and raises the engineering bar. At GaurData I solo-founded and built an AI-powered data platform: all-Rust backend over gRPC with tonic, per-workspace DuckDB analytical isolation, PostgreSQL control plane, and NixOS infrastructure. At Factly I led Gopie, a natural-language analytics product in Go, cutting query latency from 5s to under 1s, built event-driven metering in production, and set the testing and code-review standards across three codebases while mentoring junior engineers.
+
+% --- Experience ---
+\section*{Experience}
+
+\entryheader{GaurData, Technical Co-founder / Senior Backend Engineer}{02/2026 -- present}{Hyderabad, India $\cdot$ \href{https://gaur.run}{gaur.run} $\cdot$ data infrastructure startup $\cdot$ sole engineer}{}
+\begin{itemize}
+  \item Founded and owned the product end to end: roadmap decisions, architecture, TypeScript and Node API layer, React frontend, Rust microservices, deployment, and every incident.
+  \item Implemented high-performance backend microservices in Rust communicating via async gRPC (tonic), isolating analytical query execution in dedicated DuckDB processes from the PostgreSQL transactional control plane.
+  \item Built per-tenant isolation, row-level access, API-key scoping, and audit logging enforced directly in the query path rather than trusted to each call site, returning stable error codes on invalid access.
+  \item Built AI agents that answer natural-language questions over customer data through an MCP server, with streaming responses and access scoped before any query runs so an agent cannot read past caller boundaries.
+  \item Built the React application on TanStack Start: data fetching and mutation, progressive loading and error states around AI queries, form flows, and type-safe clients from SQL schema to UI.
+  \item Applied TDD and contract testing across the platform, with architecture boundaries enforced in CI and fuzz testing on query parsers.
+  \item Ran production infrastructure on Hetzner with a reusable Nix framework, containerized services, and systemd units managed through custom deployment workflows.
+\end{itemize}
+
+\entryheader{Factly Research \& Media}{09/2022 -- 01/2026}{Hyderabad, India}{}
+
+\subentryheader{Senior Backend Developer \& Project Lead}{04/2024 -- 01/2026}
+\begin{itemize}
+  \item Owned the Go backend for Gopie (\href{https://gopie.ai}{gopie.ai}), a natural-language analytics product, and led delivery from product spec to production across a team spanning AI, frontend, and DevOps.
+  \item Cut query latency from 5s to under 1s through PostgreSQL query and schema work, after profiling where time was lost rather than rewriting what looked slow.
+  \item Built Meterus, a Rust and Go metering and billing service streaming events through Redpanda on the Kafka API into ClickHouse; two years in production across a dozen applications with almost no maintenance.
+  \item Folded API-key issuance, key scoping, and per-key usage tracking into Meterus, leading delivery with two engineers building client applications.
+  \item Raised code quality across the team: set API, testing, and code-review standards across Go, Rust, and TypeScript codebases, and mentored junior engineers on them.
+  \item Restructured Gopie's query core so storage and transport could change without touching it. Open-sourced under AGPL.
+\end{itemize}
+
+\subentryheader{Backend Developer}{02/2023 -- 03/2024}
+\begin{itemize}
+  \item Built the Node.js and TypeScript API layers behind tagore.ai, Factly's AI research platform serving answers over 2,000,000 documents and 500,000 data tables.
+  \item Delivered streaming model responses to keep latency low on large result sets, with request validation at API boundaries and typed clients.
+  \item Integrated Claude, GPT, and LLaMA behind one interface and reworked prompt design to reduce hallucinated answers.
+  \item Scaled \href{https://github.com/factly/ruspie}{ruspie} to 25,000+ datasets served straight from Google Cloud Storage, and added an nl2sql endpoint so non-technical users could query datasets in plain English.
+  \item Converted the dataset catalogue from CSV to Parquet, significantly accelerating query throughput while compressing storage footprint.
+\end{itemize}
+
+\subentryheader{Backend Developer, Internship}{09/2022 -- 01/2023}
+\begin{itemize}
+  \item Built ruspie from scratch in Rust on Apache Arrow and DataFusion: a query engine that reads CSV and Parquet files straight from cloud storage and serves them over REST, SQL, and GraphQL, with no database to load them into first.
+  \item Shipped it as the engine behind dataful.in, a public dataset marketplace for journalists, and open-sourced it as \href{https://github.com/factly/ruspie}{factly/ruspie}.
+\end{itemize}
+
+% --- Projects & Open Source ---
+\section*{Projects \& Open Source}
+\begin{itemize}
+  \item \textbf{\href{https://elliot14a.work}{elliot14a.work}} (\href{https://github.com/elliot14A/portfolio}{github.com/elliot14A/portfolio}) -- my portfolio, built as a working Neovim clone in TypeScript with modal editing and command handling, server-rendered from a single Cloudflare Worker with Hono, plus a built-in \texttt{:ask} chat command.
+  \item \textbf{\href{https://github.com/elliot14A/abel}{abel}} (\href{https://github.com/elliot14A/abel}{github.com/elliot14A/abel}) -- author. Open-source Go tool that reproduces a failing CI job locally by running its steps in the Docker image the job declares, carrying state between steps and capturing the failing step, command, exit code, and log tail as structured data. One set of use cases behind two transports, a CLI and an MCP server.
+  \item \textbf{\href{https://github.com/factly/ruspie}{ruspie}} (\href{https://github.com/factly/ruspie}{github.com/factly/ruspie}) -- author. Rust query engine on Apache Arrow and DataFusion, reading Parquet and CSV straight from object storage and serving 25,000 datasets over GraphQL, REST, and SQL. Open-sourced and in production at Factly.
+  \item \textbf{\href{https://github.com/elliot14A/minitraycer}{minitraycer}} (\href{https://github.com/elliot14A/minitraycer}{github.com/elliot14A/minitraycer}) -- author. CLI and MCP planning server in TypeScript that gates coding agents behind human-approved plans.
+\end{itemize}
+
+% --- Skills ---
+\section*{Skills}
+\begin{itemize}[leftmargin=*,label={}]
+  \item \textbf{Languages:} TypeScript, JavaScript, Node.js, Rust, Go, SQL, Python, Bash
+  \item \textbf{Frontend:} React, TanStack Start, Next.js, Tailwind CSS, Interactive UI architecture, Data fetching and mutation, Async loading and error states, Type-safe clients, Server-side rendering, Cloudflare Workers
+  \item \textbf{APIs \& data modeling:} GraphQL, REST APIs, API contracts and versioning, Strong data modeling guarantees, Streaming endpoints, Webhooks, Session auth, API keys and scoping
+  \item \textbf{Async \& infrastructure:} Message queues and background jobs, Event-driven architecture, Docker and containerised builds, Nix/NixOS declarative deployments, CI/CD on GitHub Actions, Linux, Monitoring, alerting and on-call readiness
+  \item \textbf{Data:} PostgreSQL, ClickHouse, DuckDB, Redis, MongoDB, Redpanda (Kafka API), NATS, Apache Arrow, Parquet, Object storage
+  \item \textbf{Ways of working:} Engineering requirement documents, End-to-end ownership from research to monitoring, Written and asynchronous communication, Code review, Engineering standards, Mentoring
+  \item \textbf{Open source \& AI:} Author of ruspie, abel, minitraycer, AI-assisted development (Claude Code), MCP servers and tools, TDD, Contract and fuzz testing
+\end{itemize}
+
+% --- Education ---
+\section*{Education}
+\noindent\textbf{\color{primary}Bachelor of Technology (B.Tech), Electronics and Computer Engineering} \hfill {\small\color{meta}06/2019 -- 06/2023}\\[1.5pt]
+\textit{\small Sreenidhi Institute of Science and Technology, Hyderabad, India (affiliated to JNTU Hyderabad)}\\[2.5pt]
+{\small \textbf{Languages:} English (C1) $\cdot$ Hindi $\cdot$ Telugu $\cdot$ German (A1, in progress)}
+
+\end{document}

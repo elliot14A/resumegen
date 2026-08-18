@@ -1,0 +1,69 @@
+\documentclass[10pt,a4paper]{article}
+
+% --- ATS-Safe Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.7in,top=0.55in,bottom=0.55in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+% --- Color Definitions ---
+\definecolor{primary}{RGB}{23, 51, 79}        % Deep Navy
+\definecolor{darktext}{RGB}{26, 26, 26}       % Off-black for body
+\definecolor{meta}{RGB}{74, 90, 104}          % Charcoal meta text
+\definecolor{linkblue}{RGB}{0, 0, 158}        % Clickable link blue
+
+% --- Hyperlink Setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkblue,
+    urlcolor=linkblue,
+    pdfauthor={Akshith Katkuri},
+    pdftitle={Akshith Katkuri - Cover Letter}
+}
+
+% --- Typography & Margins ---
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\color{darktext}
+
+\begin{document}
+
+% --- Letterhead (Matches Resume Style) ---
+\begin{center}
+  {\fontsize{18pt}{20pt}\selectfont \textbf{\color{primary}AKSHITH KATKURI}}\\[2.5pt]
+  {\fontsize{10.5pt}{12pt}\selectfont \textbf{\color{primary}Senior Software Engineer}}\\[3pt]
+  {\small Hyderabad, India $\cdot$ Open to relocation to Berlin $\cdot$ +91 93904 31427 $\cdot$ \href{mailto:akshithkatkuri14@gmail.com}{akshithkatkuri14@gmail.com}}\\[2pt]
+  {\small \href{https://elliot14a.work}{elliot14a.work} \ \textbf{|} \ \href{https://github.com/elliot14A}{github.com/elliot14A} \ \textbf{|} \ \href{https://linkedin.com/in/akshith-katkuri-14am}{linkedin.com/in/akshith-katkuri-14am}}
+\end{center}
+\vspace{2pt}
+\hrule height 0.6pt \color{primary}
+\vspace{8pt}
+
+% --- Recipient Block ---
+\noindent \textbf{Helsing}\\
+Berlin, Germany\\
+19 August 2026\\[3pt]
+\textbf{Application: Senior Rust Systems Engineer}
+
+\vspace{3pt}
+
+Dear Helsing team,
+
+Live sensor processing and telemetry in Rust, microsecond throughput where memory safety is non-negotiable, and a team that treats deterministic execution as a foundational discipline. I am applying for the Senior Rust Systems Engineer role.
+
+At GaurData (\href{https://gaur.run}{gaur.run}), a data runtime platform I solo-founded, I designed the all-Rust backend architecture from scratch. To guarantee multi-tenant security and zero-trust boundaries, authorization contexts and data contract allow-lists are resolved directly within the query execution path before any database operation proceeds. To isolate analytical workloads, I dedicated standalone DuckDB processes per workspace communicating over tonic gRPC, eliminating shared lock contention while keeping the blast radius minimal.
+
+In high-throughput data engineering, at Factly I built Meterus, an event-driven metering service in Rust and Go that streams usage telemetry through Redpanda on the Kafka API into ClickHouse. When miscounting an event means billing someone wrongly, ingestion-lag monitoring and correctness under concurrent load are not optional; it has run in production across a dozen applications with near-zero maintenance. Earlier, I created \href{https://github.com/factly/ruspie}{ruspie}, an open-source Rust query engine on Apache Arrow and DataFusion streaming SQL over Parquet and CSV files in object storage across 25,000 datasets.
+
+I hold my software to strict quality bars: \href{https://github.com/elliot14A/abel}{abel}, an open-source tool I authored, enforces architectural boundaries in CI, fuzzes its parser, and validates storage layers with contract test suites. At Factly, I also established API, testing, and code-review standards across Go, Rust, and TypeScript codebases, ensuring pull request reviews served as mentorship rather than bottlenecks.
+
+I work regularly in European hours and would relocate to Berlin. I am eligible for the EU Blue Card. My code is at \href{https://github.com/elliot14A}{github.com/elliot14A} and my portfolio, a working Neovim clone in TypeScript served from a single Cloudflare Worker, is at \href{https://elliot14a.work}{elliot14a.work}.
+
+\vspace{5pt}
+Best regards,\\[2pt]
+\textbf{Akshith Katkuri}
+
+\end{document}
