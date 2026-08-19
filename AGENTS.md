@@ -16,12 +16,16 @@ resume-builder/
 │   ├── lib.rs                                 # Library root
 │   ├── cli.rs                                 # Clap CLI commands
 │   ├── models.rs                              # Schema data structures
-│   ├── render.rs                              # LaTeX generator
+│   ├── render.rs                              # LaTeX generator with section filtering
 │   ├── compile.rs                             # Tectonic compiler
 │   ├── check.rs                               # 10-point ATS quality gate
 │   ├── track.rs                               # Ledger manager
-│   ├── skill.rs                               # Skill matrix editor
+│   ├── skill.rs                               # Skill matrix & summary editor
 │   └── init.rs                                # Workspace bootstrap
+├── tests/                                     # Automated test suite
+│   ├── test_resumegen.rs                      # 7 integration tests
+│   ├── sample_job_description.txt             # Test fixture
+│   └── sample_company_notes.txt              # Test fixture
 ├── flake.nix                                  # Nix development shell (Rust, Tectonic, poppler-utils)
 ├── master_resume.example.yaml                 # Generic candidate facts bank template
 ├── .gitignore                                 # Ignores target/, .resumegen/, personal YAML, and binaries
@@ -32,7 +36,7 @@ resume-builder/
 ├── .agents/                                   # Agent Skills standard package
 │   └── skills/
 │       └── resume-cover-letter-generator/
-│           ├── SKILL.md                       # Skill prompt & job-application workflow
+│           ├── SKILL.md                       # Skill prompt & interactive Q&A workflow
 │           ├── assets/                        # Canonical reference LaTeX templates
 │           │   ├── reference_resume.tex
 │           │   └── reference_cover_letter.tex
@@ -60,14 +64,71 @@ resume-builder/
 
 3. **Candidate-Agnostic Design**:
    - The CLI must never hardcode candidate names, URLs, institutions, or relocation preferences.
-   - All candidate metadata, custom relocation statements, work authorization, and custom quality check overrides are resolved dynamically from `master_resume.yaml` (or `.resumegen/master_resume.yaml` / `master_resume.example.yaml`).
+   - All candidate metadata, custom relocation statements, work authorization, and custom quality check overrides are resolved dynamically from `master_resume.yaml`.
 
-4. **10-Point Quality Gate (`resumegen check`)**:
-   - Every generated document must pass PDF selectability, page budget limits (strictly <= 2 pages for resumes, 1 page for cover letters), anti-slop checks, and 8+ word anti-plagiarism checks before ledger recording.
+4. **Interactive Q&A Operating Mode**:
+   - Agents using the skill never one-shot a resume. They evaluate the JD, draft a proposal (which bullets in/out, which summary, which projects), wait for human confirmation, then build.
+   - See `.agents/skills/resume-cover-letter-generator/SKILL.md` for the full workflow.
+
+5. **10-Point Quality Gate (`resumegen check`)**:
+   - Every generated document must pass PDF selectability, page budget limits, anti-slop checks, and 8+ word anti-plagiarism checks before ledger recording.
 
 ---
 
-## 3. Development & Build Workflows
+## 3. Key Data Models (`src/models.rs`)
+
+### `ExperienceItem`
+```rust
+pub struct ExperienceItem {
+    pub id: String,
+    pub company: String,
+    pub role: String,
+    pub dates: String,
+    pub location: String,
+    pub summary: Option<String>,              // Default experience description
+    pub summaries: Option<BTreeMap<String, String>>, // Focus-keyed descriptions (e.g. "backend", "fullstack")
+    pub roles_history: Vec<RoleHistoryItem>,  // Multi-role progression
+    pub bullets: Vec<BulletItem>,
+}
+```
+
+### `BulletItem`
+```rust
+pub struct BulletItem {
+    pub id: String,          // Stable ID used for --exclude-bullets
+    pub tags: Vec<String>,   // Used for --bullet-tags prioritization
+    pub text: String,
+}
+```
+
+### `SummaryItem`
+```rust
+pub struct SummaryItem {
+    pub id: String,    // Referenced by --summary-id
+    pub focus: String, // Human-readable description of the summary archetype
+    pub text: String,
+}
+```
+
+---
+
+## 4. Render Pipeline & Section Customization (`src/render.rs`)
+
+`do_render(RenderOptions)` applies the following transformations in order:
+
+1. **Summary selection**: `--summary` overrides text directly. `--summary-id` looks up `summary_bank`. Falls back to first summary.
+2. **Bullet filtering per company**:
+   - `--exclude-bullets <id,id>`: hard-removes bullet IDs before any filtering.
+   - `--bullet-tags <tag,tag>`: floats matching bullets to the top of each role's list.
+   - `--max-bullets-per-role <n>`: truncates the final list to n bullets.
+3. **Experience descriptions**: `--experience-summaries "company_id:text;company_id:text"` injects per-company italic descriptions below the company header. Falls back to YAML `summary` or focus-keyed `summaries` matched against `--bullet-tags`.
+4. **Project curation**: `--include-projects` or `--exclude-projects` (mutually exclusive).
+5. **Skill front-running**: `--lead-skills` moves matching items to the front of each category's item list.
+6. **Category filtering**: `--include-categories` or `--exclude-categories`.
+
+---
+
+## 5. Development & Build Workflows
 
 ### Building the Binary
 ```bash
@@ -83,12 +144,20 @@ In the Nix dev shell (`nix develop`), this deployment happens automatically on s
 
 ### Running Checks & Tests
 ```bash
-# Run Rust unit tests
+# Run Rust unit tests (7 integration tests)
 cargo test
 
-# Validate output
-resumegen check .resumegen/resumes/jane_doe_resume_testcorp.pdf
+# Validate a generated PDF against all 10 ATS rules
+resumegen check .resumegen/resumes/jane_doe_resume_testcorp.pdf \
+  --tex .resumegen/resumes/jane_doe_resume_testcorp.tex
 ```
+
+### Adding New CLI Flags
+1. Add the field to the `Commands::Build` and `Commands::Render` variants in `src/cli.rs`.
+2. Add the field to `RenderOptions<'a>` in `src/render.rs`.
+3. Thread it through the match destructure and `RenderOptions` construction in `cli.rs`.
+4. Use it in `do_render()` in `render.rs`.
+5. Update `tests/test_resumegen.rs` to include the new field in the `RenderOptions` struct literal.
 
 ### Git & Security Hygiene
 - **Never commit compiled binaries** (`.agents/**/scripts/resumegen` is gitignored).
