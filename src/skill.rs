@@ -118,3 +118,30 @@ pub fn handle_add_bullet(company: &str, tags: &str, text: &str) -> Result<()> {
     }
     Ok(())
 }
+
+pub fn handle_add_summary(id: &str, focus: &str, text: &str) -> Result<()> {
+    let master_path = resolve_master_resume_path(None);
+    let content = fs::read_to_string(&master_path)?;
+    let mut resume: MasterResume = serde_yaml::from_str(&content)?;
+
+    if resume.summary_bank.iter().any(|s| s.id.eq_ignore_ascii_case(id)) {
+        eprintln!("{} Summary ID '{}' already exists. Use a different ID.", "[ERROR]".red().bold(), id);
+        return Ok(());
+    }
+
+    resume.summary_bank.push(crate::models::SummaryItem {
+        id: id.to_string(),
+        focus: focus.to_string(),
+        text: text.to_string(),
+    });
+
+    fs::write(&master_path, serde_yaml::to_string(&resume)?)?;
+    println!(
+        "{} Added summary '{}' ({}):\n  {}",
+        "[OK]".green().bold(),
+        id.cyan().bold(),
+        focus,
+        text
+    );
+    Ok(())
+}

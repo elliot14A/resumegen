@@ -10,192 +10,292 @@ description: >-
 
 # ATS Resume & Cover Letter Generator (`resumegen`)
 
-Use this skill when evaluating job descriptions, generating tailored ATS-compliant resumes and matching cover letters in LaTeX and PDF, managing declarative candidate fact banks, or tracking application history.
+**Core Motto**: Give the agent maximum creative freedom to tailor every section while strictly enforcing deterministic quality invariants and zero hallucinations.
 
-Designed as an **Agent-First Toolchain** for coding agents (Antigravity/AGY, Claude Code, Codex, Cursor) with a core motto:  
-**Empower the agent with maximum creative freedom to tailor content while strictly enforcing deterministic quality invariants with zero hallucinations.**
+**Operating Mode**: Interactive Q&A and proposal flow. Never one-shot a resume. Always evaluate, propose, confirm, then build.
 
 ---
 
-## 1. Core Operating Architecture & Tooling
+## 1. Core Architecture & Tooling
 
 The toolchain is powered by a single unified binary: **`resumegen`** (available on `$PATH` in the Nix devShell or in `.agents/skills/resume-cover-letter-generator/scripts/resumegen`).
 
-All generated artifacts, LaTeX sources, PDFs, and tracking ledgers are stored inside **`.resumegen/`**:
+All generated artifacts are stored inside **`.resumegen/`**:
 - `.resumegen/resumes/` - Generated `.tex` and `.pdf` documents
 - `.resumegen/ledger.csv` - Local application tracking ledger
 
 ```
 resumegen
-├── build          # Turnkey 0-to-1 pipeline: Render -> Compile -> Check -> Track (outputs to .resumegen/resumes/)
-├── render         # Deterministic LaTeX generator with automatic character escaping
+├── build          # Turnkey pipeline: Render -> Compile -> Check -> Track
+├── render         # Deterministic LaTeX generator with section filtering
 ├── compile        # Tectonic-backed PDF compiler (.tex -> .pdf)
-├── check          # 10-point ATS, page budget, banned words, & 8-word reuse validator
-├── track          # Unified ledger synchronizer & query tool (unifies .resumegen/ledger.csv and ~/Documents/resumes/)
-└── skill          # Declarative manager for skills, categories, and bullets in master_resume.yaml
+├── check          # 10-point ATS, page budget, anti-slop, & 8-word reuse validator
+├── track          # Unified dual-ledger synchronizer & query tool
+└── skill          # Declarative manager: add summaries, bullets, categories to master_resume.yaml
 ```
 
 ---
 
-## 2. Invariant Rules & Quality Standards
+## 2. Document Quality Invariants (Non-Negotiable)
 
-### A. Resume Standards
-1. **Length & Density**: Strictly **2 pages maximum** (dense, high-information, ~5,000-7,000 selectable characters).
-2. **Title Line Invariant**: Under candidate name in header, display **ONLY the exact target role title** from the JD (e.g. `Senior Software Engineer` or `Senior TypeScript Engineer`). Do NOT concatenate subtitles, tags, or domain phrases.
-3. **Education Section**:
-   - Matches verified degrees in `master_resume.yaml`.
-   - `Languages:` MUST be rendered on its own dedicated separate line below the institution name.
-4. **Relocation & Work Authorization**:
-   - Fully candidate-configurable via `candidate.relocation` in `master_resume.yaml`.
-   - If `enabled: false`, no relocation text is injected into the resume header.
-   - If `enabled: true`, uses the candidate's `header_tag` or `target`.
-5. **Projects & Open Source**:
-   - Every project MUST have its repository URL in linked parentheses: `(\href{repo_url}{repo_display})` followed by `-- full description`.
-   - Ground-truth repository URLs and descriptions are preserved without fabrication.
+These rules apply to every generated document without exception:
 
----
+### Resume Invariants
+1. **Max 2 pages** (~5,000-7,000 selectable characters). Dense. No filler.
+2. **Exact role title from JD** under candidate name. Never modify or concatenate.
+3. **All project URLs must be real** from `master_resume.yaml`. Never fabricate links.
+4. **Every project must have a linked repo**: `(\href{repo_url}{display})`.
+5. **Education institution matches** `education` in `master_resume.yaml` verbatim.
 
-### B. Cover Letter Standards
-1. **Length**: Strictly **1 page** (5 focused, muscular paragraphs).
-2. **Opening Hook (Punchy 1-Sentence)**:
-   - Summarize the exact stack overlap and engineering culture, ending immediately with the application line.
-3. **Paragraph Structure**:
-   - *Paragraph 1*: Punchy Hook + Direct Application Statement (`--company-notes`).
-   - *Paragraph 2*: Concrete Systems / Backend Engineering Ownership and metrics (`--cover-body` or default).
-   - *Paragraph 3*: Domain Architecture & Security Governance (access control, isolated query execution, distributed backends).
-   - *Paragraph 4*: Testing Standards & Open Source Tooling (fuzz testing, contract tests, streaming data).
-   - *Paragraph 5*: Location / timezone availability, relocation readiness and work authorization (resolved dynamically from `candidate.relocation.custom_statement` in `master_resume.yaml` if provided), and GitHub / portfolio links.
-4. **Wording Reuse Guardrail**: Zero 8+ word rolling n-gram verbatim matches against baseline templates (`.agents/skills/resume-cover-letter-generator/assets/reference_cover_letter.tex`). Candidate identity tokens and custom statements are automatically exempt.
-5. **No AI Slop / Fluff**: No banned words (`genuinely`, `honestly`, `actually`, `thrilled`, `passionate`, `excited`, `leverage`).
-6. **No Duration Language**: No `"four years"`, `"years of experience"`, `"5+ years"`.
-7. **No Em Dashes**: Clean ASCII separators (`--`, `, `, `-`).
+### Cover Letter Invariants
+1. **Strictly 1 page**. 5 focused paragraphs.
+2. **No banned words**: `genuinely`, `honestly`, `actually`, `thrilled`, `passionate`, `excited`, `leverage`.
+3. **No duration language**: `"four years"`, `"years of experience"`, `"5+ years"`.
+4. **No em dashes**. Use `--`, `,` or `-`.
+5. **Zero 8+ word verbatim matches** against `reference_cover_letter.tex` (dynamic candidate tokens exempted).
 
 ---
 
-## 3. Cognitive Agent Workflow: JD Evaluation & Tailoring Pipeline
+## 3. Interactive Q&A Workflow
 
-When a user provides a Job Description (JD) or company notes, follow this 6-step intelligent workflow:
+**This is the only acceptable workflow. Never build without going through Steps 1-4.**
 
 ```
-[Job Description Provided]
-           │
-           ▼
-[Step 1: Ingest Candidate Facts (master_resume.yaml)]
-           │
-           ▼
-[Step 2: JD Parsing & Skillset Match Analysis]
-           │
-   ┌───────┴───────┐
-   │               │
-[Strong Match] [Critical Mismatch]
-   │               │
-   │               ▼
-   │       [Ask User: Gaps Detected. Proceed or Abort?]
-   │               │ (If Proceed)
-   └───────┬───────┘
-           │
-           ▼
-[Step 3: Granular Section Customization & Front-Running]
-   ├── Front-run language in --lead-skills (e.g. TypeScript vs Go vs Rust)
-   ├── Prioritize relevant experience bullets via --bullet-tags
-   ├── Curate relevant projects via --include-projects / --exclude-projects
-   ├── Write targeted summary via --summary or select --summary-id
-   └── Craft tailored company hook via --company-notes
-           │
-           ▼
-[Step 4: Execute Turnkey Build (resumegen build)]
-           │
-           ▼
-[Step 5: Quality Gate & Invariant Verification (resumegen check)]
-           │
-           ▼
-[Step 6: Report Match Breakdown & Deliver Document Links]
+[JD + Company Provided]
+         │
+         ▼
+[Step 1: Read master_resume.yaml & Check Prior Applications]
+         │
+         ▼
+[Step 2: JD Analysis & Gap Evaluation]
+         │
+   ┌─────┴─────┐
+[Match]   [Critical Mismatch]
+   │             │
+   │         [Ask User: Proceed or Skip?]
+   │             │ (if proceed)
+   └──────┬──────┘
+          │
+          ▼
+[Step 3: Draft Build Proposal → Present to User for Review]
+   ├── Which summary will be used or newly authored
+   ├── Per-company: which bullets selected, which excluded, and why
+   ├── Which projects included/excluded
+   ├── What experience descriptions will say
+   └── Cover letter hook + body narrative
+          │
+   [User Reviews Proposal]
+   ├── "Looks good" → proceed
+   ├── "Change X" → revise proposal
+   └── "Add a new summary / bullet" → write it, run `resumegen skill`, then confirm
+          │
+          ▼
+[Step 4: Execute Build (resumegen build ...)]
+          │
+          ▼
+[Step 5: Report Quality Gate Results + Artifact Links]
 ```
 
-### Step 1: Ingest Candidate Facts Bank
-Read `master_resume.yaml` (or `.resumegen/master_resume.yaml`) to understand the candidate's verified career history, strengths, summary archetypes, open-source projects, and skill matrix.
+---
 
-### Step 2: JD Parsing & Skillset Match Analysis
-Parse the target Job Description to extract:
-1. **Target Company & Exact Role Title** (e.g. `Senior TypeScript Engineer`, `Senior Backend Engineer (Go/Rust)`).
-2. **Core Tech Stack Requirements** (e.g. TypeScript, React, Next.js, Node.js vs. Go, PostgreSQL, Kafka vs. Rust, Systems, Low Latency).
-3. **Domain & Engineering Responsibilities** (e.g. developer tooling, distributed access-control, real-time data streaming).
-4. **Location & Work Authorization Requirements** (e.g. Remote EU, Hybrid Berlin, US Citizen Only, Relocation support).
+### Step 1: Ingest & Check History
 
-#### 🚨 Critical Mismatch Evaluation Gate
-Compare the JD requirements against the candidate's verified skills:
-- **Strong Match**: The core stack overlaps directly with candidate strengths (e.g. Go, Rust, TypeScript/Node, Distributed Systems, Cloud/Nix, Databases).
-  - *Action*: Proceed immediately to Step 3 for tailored section customization.
-- **Critical Mismatch**: The JD requires mandatory expertise in technologies the candidate does NOT have in `master_resume.yaml` (e.g. 5+ years Java/Spring, Swift/iOS, Ruby on Rails, C#, Hardware design) OR strict non-relocatable local residency/clearance requirements.
-  - *Action*: **STOP AND ASK THE USER**. Prompt the candidate with a transparent gap breakdown:
-    > "I analyzed the Job Description for **[Role] at [Company]**. There are critical stack/experience mismatches:
-    > - **Required**: [e.g. 5+ years Java/Spring, AWS DynamoDB]
-    > - **Candidate Bank**: [Go, Rust, TypeScript, PostgreSQL]
-    > 
-    > Would you like me to tailor and generate anyway (framing your transferable distributed systems background), or skip this application?"
-  - Wait for candidate confirmation before proceeding.
+Read `master_resume.yaml` completely. Understand all summaries, all bullet IDs, all projects, and all tags.
 
-### Step 3: Granular Section Customization & Front-Running Strategy
-Tailor every section of the document to maximize relevancy for the target JD using granular CLI parameters:
+Then check if the company was already targeted:
+```bash
+resumegen track query <company>
+```
 
-| Section | Customization Strategy | CLI Options |
-| :--- | :--- | :--- |
-| **Summary** | Target specific domain/stack focus | `--summary "<custom_text>"` or `--summary-id "<id>"` |
-| **Languages & Skills** | Front-run primary JD language | `--lead-skills "TypeScript,JavaScript,Node.js,React..."` |
-| **Job Experience Descriptions** | Tailor company/role summary paragraphs | `--experience-summaries "gaur_data:Architected all-Rust gRPC data platform;factly:Led data platform..."` |
-| **Experience Bullets** | Prioritize bullets matching JD tags | `--bullet-tags "backend,postgres,scale"` or `frontend,react,typescript` |
-| **Role Bullet Ceiling**| Keep bullet density tight & balanced | `--max-bullets-per-role 4` |
-| **Projects Section** | Include only relevant projects | `--include-projects "fastkv,abel"` or `--exclude-projects "minitraycer"` |
-| **Skill Categories** | Filter categories | `--include-categories "Languages,Backend & Systems"` |
-| **Cover Letter Hook**| Specific company value proposition | `--company-notes "<crafted_hook>"` |
-| **Cover Letter Body**| Tailored systems narrative | `--cover-body "<custom_engineering_win>"` |
+---
 
-#### Concrete Tailoring Examples:
-- **For a TypeScript / Node / Fullstack Role**:
-  - `--lead-skills "TypeScript,JavaScript,Node.js,React,Next.js,PostgreSQL,Docker"`
-  - `--bullet-tags "typescript,frontend,fullstack,react"`
-  - `--include-projects "elliot14a,abel"` (highlight portfolio, parser tooling; omit graphics/C++)
-  - `--summary "Fullstack software engineer with deep expertise in TypeScript, React, Next.js, and backend API design."`
-- **For a Go / IAM / Access Control Role**:
-  - `--lead-skills "Go,PostgreSQL,Docker,Kubernetes,Redis,TypeScript,Rust"`
-  - `--bullet-tags "go,postgres,iam,auth,security,scale"`
-  - `--summary-id "go_iam_focus"`
-  - `--include-projects "abel,ruspie,elliot14a"`
-- **For a Rust / Low-Latency Systems Role**:
-  - `--lead-skills "Rust,Apache Arrow,DataFusion,gRPC,PostgreSQL,Go,Linux"`
-  - `--bullet-tags "rust,grpc,systems,performance,arrow"`
-  - `--summary-id "backend_systems_focus"`
-  - `--include-projects "ruspie,abel,minitraycer"`
+### Step 2: JD Analysis & Gap Evaluation
 
-### Step 4: Turnkey Build Execution
-Invoke `resumegen build` with all tailored parameters:
+Parse the JD to extract:
+1. **Exact role title** (e.g. `Senior TypeScript Engineer`, `Backend Engineer (Go)`)
+2. **Core tech stack** listed as required vs. nice-to-have
+3. **Domain responsibilities** (e.g. IAM, developer tooling, real-time data, AI products)
+4. **Location / work authorization requirements**
+
+#### Critical Mismatch Gate
+- **Strong match**: Candidate has direct experience with the JD's core stack. Proceed to Step 3.
+- **Critical mismatch**: JD requires expertise the candidate lacks entirely (e.g. Java/Spring, Swift/iOS, Rails). **Stop and ask the user**:
+  > "I found critical mismatches for **[Role] at [Company]**:
+  > - Required: [e.g. 5+ years Java/Spring, DynamoDB]
+  > - Candidate Bank: Go, Rust, TypeScript, PostgreSQL
+  >
+  > Proceed with transferable framing, or skip this application?"
+
+---
+
+### Step 3: Draft Build Proposal (Always Present This First)
+
+Before running any build command, present a structured proposal to the user. Be specific about every decision.
+
+**Proposal Format:**
+
+```
+## Build Proposal: [Role] at [Company]
+
+**Target Role**: [Exact JD role title]
+**Stack Front-Run**: [e.g. TypeScript, React, Node.js]
+
+### Summary
+Using: [summary_id] / New summary (to be added):
+> "[summary text]"
+
+### GaurData Experience
+Selected bullets (by ID):
+- [bullet_id]: "[bullet text]" (reason: matches TypeScript/React focus)
+- [bullet_id]: "[bullet text]" (reason: shows ownership)
+
+Excluded bullets (by ID):
+- [bullet_id]: "[bullet text]" (reason: Rust/gRPC not relevant for this role)
+- [bullet_id]: "[bullet text]" (reason: DuckDB analytical isolation not core here)
+
+Experience description: "[italicized overview below header]"
+
+### Factly Experience
+Selected bullets: [...]
+Excluded bullets: [...]
+Experience description: "[...]"
+
+### Projects
+Included: [project_id, project_id]
+Excluded: [project_id] (reason: not relevant to stack)
+
+### Cover Letter
+Opening hook: "[company-specific hook]"
+Technical narrative: "[tailored engineering wins]"
+```
+
+Wait for user response. If they say:
+- **"Looks good"** or **"proceed"** → go to Step 4.
+- **"Change X"** → update the proposal and re-present it.
+- **"Add a new summary for GaurData"** or **"the backend bullet doesn't match"** → author the new content, use `resumegen skill` to persist it, confirm with user, then proceed.
+
+---
+
+### Step 3a: Authoring New Summaries & Bullets
+
+The agent can and should author new summaries or bullets when existing ones do not fit the target role. Rules:
+
+1. **Zero fabrication**: Only include facts, metrics, and technologies that appear in the candidate's existing bullet bank or are verifiable from the YAML.
+2. **No banned words or duration language**.
+3. **Tight and specific**: No generic claims. Every sentence must map to a concrete deliverable.
+
+To add a new summary:
+```bash
+resumegen skill add-summary \
+  --id "typescript_platform_focus" \
+  --focus "TypeScript, React & Developer Tooling" \
+  --text "Fullstack engineer who built and owned the entire GaurData platform: TypeScript/Node API layer, React frontend on TanStack Start with type-safe client generation from SQL schema, and AI agent integrations with MCP streaming. Previously led open-source analytics tooling at Factly."
+```
+
+Then confirm with the user:
+> "Added summary `typescript_platform_focus` to master_resume.yaml:
+> *'[summary text]'*
+> Using this for the build?"
+
+---
+
+### Step 4: Build Execution
+
+After user confirmation of the proposal, invoke `resumegen build` with precisely the flags from the proposal:
+
 ```bash
 resumegen build \
-  --company "Ory" \
-  --role "Senior Backend Engineer" \
-  --location "Munich, Germany / Remote" \
-  --summary "Senior backend engineer specializing in Go microservices, access control governance, and low-latency PostgreSQL profiling." \
-  --lead-skills "Go,PostgreSQL,Docker,Kubernetes,TypeScript" \
-  --bullet-tags "backend,postgres,scale,iam" \
+  --company "Vercel" \
+  --role "Senior TypeScript Engineer" \
+  --location "Remote (EU)" \
+  --summary-id "typescript_platform_focus" \
+  --lead-skills "TypeScript,React,Node.js,Next.js,PostgreSQL,Docker" \
+  --bullet-tags "typescript,react,frontend,fullstack,mcp,ai" \
+  --exclude-bullets "gaur_grpc_duckdb,gaur_auth_path,factly_ruspie_arrow" \
   --max-bullets-per-role 4 \
-  --include-projects "abel,ruspie,elliot14a" \
-  --company-notes "Ory has established the open-source standard for identity, authentication, and zero-trust authorization systems." \
+  --experience-summaries "gaur_data:Built and owned the full GaurData TypeScript platform;factly:Led open-source analytics frontend and streaming product integrations" \
+  --include-projects "elliot14a,abel" \
+  --exclude-projects "minitraycer" \
+  --company-notes "Vercel defines the modern deployment and developer experience standard for frontend infrastructure at scale." \
+  --cover-body "At GaurData I built the complete TypeScript and React product layer, generating type-safe client bindings from the SQL schema, composing TanStack query flows for AI streaming responses, and enforcing MCP boundary policies at the transport layer before any data was surfaced." \
   --relocation true \
   --relocation-target "Germany"
 ```
 
-### Step 5: Quality Gate & Verification Audit
-`resumegen check` automatically verifies:
-- PDF selectability (>100 characters)
-- Strict page budget (<= 2 pages resume, 1 page cover letter)
-- No banned AI fluff words
-- No duration language
-- No em dashes
-- Plagiarism guardrail against reference baseline (0 rolling 8+ word matches)
+---
 
-### Step 6: Presentation to User
-Present a concise report highlighting:
-- **Match Assessment & Tailoring Strategy**: What stack was front-run and why.
-- **Section Customizations**: Bullets prioritized, projects curated, and summary selected.
-- **Verification Status**: 10/10 ATS quality gate result.
-- **Generated Artifacts**: Direct links to generated `.pdf` and `.tex` documents in `.resumegen/resumes/`.
+### Step 5: Report Results
+
+After a successful build, report:
+1. **Quality Gate**: All 10 ATS checks passing (or specific failures).
+2. **Generated Artifacts**:
+   - Resume: `.resumegen/resumes/{slug}_resume_{company}.pdf`
+   - Cover Letter: `.resumegen/resumes/{slug}_cover_letter_{company}.pdf`
+3. **Tailoring Summary**: 1-2 sentences on what was front-run and why.
+
+---
+
+## 4. Per-Stack Tailoring Reference
+
+Use this as a guide when constructing proposals:
+
+### TypeScript / Node.js / Fullstack Role
+- **Summary**: `fullstack_systems_focus` or new authored `typescript_platform_focus`
+- **Lead Skills**: `TypeScript, JavaScript, Node.js, React, Next.js, PostgreSQL, Docker`
+- **Prioritize Bullets** (`--bullet-tags`): `typescript, react, frontend, fullstack, mcp, ai, tanstack`
+- **Exclude Bullets** (`--exclude-bullets`): Rust/gRPC microservice bullets, DuckDB isolation bullets, low-level Arrow/DataFusion bullets
+- **Projects**: `elliot14a` (portfolio), `abel` (parser tooling)
+- **Omit**: `minitraycer` (graphics, C++), `ruspie` (Rust-only engine)
+
+### Go / IAM / Access Control Role
+- **Summary**: `go_iam_focus`
+- **Lead Skills**: `Go, PostgreSQL, Docker, Kubernetes, Redis, TypeScript, Rust`
+- **Prioritize Bullets** (`--bullet-tags`): `go, postgres, iam, auth, security, scale, query`
+- **Exclude Bullets** (`--exclude-bullets`): React/TanStack/frontend bullets, MCP AI streaming bullets
+- **Projects**: `abel`, `ruspie`, `elliot14a`
+- **Omit**: `minitraycer`
+
+### Rust / Low-Latency / Data Systems Role
+- **Summary**: `backend_systems_focus`
+- **Lead Skills**: `Rust, Apache Arrow, DataFusion, gRPC, PostgreSQL, Go, Linux`
+- **Prioritize Bullets** (`--bullet-tags`): `rust, grpc, systems, performance, arrow, duckdb, backend`
+- **Exclude Bullets** (`--exclude-bullets`): React/TypeScript/frontend bullets
+- **Projects**: `ruspie`, `abel`, `minitraycer`
+
+---
+
+## 5. Declarative YAML Management (`resumegen skill`)
+
+```bash
+# Add a new summary archetype
+resumegen skill add-summary --id "..." --focus "..." --text "..."
+
+# Add a bullet to a company
+resumegen skill add-bullet --company gaur_data --tags typescript,react --text "..."
+
+# List all bullets for review
+resumegen skill list
+
+# Add a skill
+resumegen skill add --category "Languages" --skill "Zig"
+```
+
+---
+
+## 6. Configurable Quality Gate Overrides (`master_resume.yaml`)
+
+```yaml
+candidate:
+  relocation:
+    enabled: true
+    target: "Germany"
+    header_tag: "Open to relocation to Germany"
+    custom_statement: "I work regularly in European hours and would welcome relocation to Germany. I am eligible for the EU Blue Card."
+    work_authorization: "Eligible for EU Blue Card"
+
+custom_checks:
+  verify_institution: true
+  max_resume_pages: 2
+  max_cover_letter_pages: 1
+  banned_words: ["genuinely", "honestly", "actually", "thrilled", "passionate", "excited", "leverage"]
+```

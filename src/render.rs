@@ -15,6 +15,7 @@ pub struct RenderOptions<'a> {
     pub lead_skills: Option<&'a str>,
     pub bullet_tags: Option<&'a str>,
     pub max_bullets_per_role: Option<usize>,
+    pub exclude_bullets: Option<&'a str>,
     pub experience_summaries: Option<&'a str>,
     pub include_projects: Option<&'a str>,
     pub exclude_projects: Option<&'a str>,
@@ -171,8 +172,15 @@ pub fn do_render(opts: RenderOptions) -> Result<(PathBuf, PathBuf)> {
         })
         .unwrap_or_default();
 
+    let excluded_bullet_ids: Vec<String> = opts.exclude_bullets
+        .map(|e| e.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect())
+        .unwrap_or_default();
+
     let filter_and_prioritize_bullets = |bullets: &[BulletItem]| -> Vec<BulletItem> {
-        let mut result = bullets.to_vec();
+        let mut result: Vec<BulletItem> = bullets.iter()
+            .filter(|b| !excluded_bullet_ids.iter().any(|ex| b.id.to_lowercase() == *ex))
+            .cloned()
+            .collect();
         if !target_tags.is_empty() {
             let mut matched = Vec::new();
             let mut others = Vec::new();

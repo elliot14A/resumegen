@@ -92,6 +92,7 @@ fn test_render_with_custom_options() {
         lead_skills: Some("Go,Rust"),
         bullet_tags: Some("postgres,go"),
         max_bullets_per_role: Some(2),
+        exclude_bullets: Some("acme_auth"),
         experience_summaries: Some("acme_corp:Engineered distributed backend microservices in Go"),
         include_projects: Some("fastkv"),
         exclude_projects: None,

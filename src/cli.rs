@@ -4,7 +4,7 @@ use crate::init::do_init;
 use crate::models::LedgerEntry;
 use crate::render::{do_render, RenderOptions};
 use crate::skill::{
-    handle_add_bullet, handle_add_category, handle_skill_add, handle_skill_list,
+    handle_add_bullet, handle_add_category, handle_add_summary, handle_skill_add, handle_skill_list,
     handle_skill_remove,
 };
 use crate::track::{get_documents_resumes_dir, save_ledger_to_csv, unify_ledgers};
@@ -79,6 +79,10 @@ pub enum Commands {
         /// Maximum bullets to include per role (default: all matching)
         #[arg(long)]
         max_bullets_per_role: Option<usize>,
+
+        /// Comma-separated bullet IDs to explicitly exclude by ID (e.g. "gaur_react,factly_intern_ruspie")
+        #[arg(long)]
+        exclude_bullets: Option<String>,
 
         /// Comma-separated project IDs to explicitly include (e.g. "fastkv,abel")
         #[arg(long)]
@@ -166,6 +170,10 @@ pub enum Commands {
         /// Maximum bullets per role
         #[arg(long)]
         max_bullets_per_role: Option<usize>,
+
+        /// Comma-separated bullet IDs to explicitly exclude
+        #[arg(long)]
+        exclude_bullets: Option<String>,
 
         /// Included project IDs
         #[arg(long)]
@@ -313,6 +321,15 @@ pub enum SkillSubcommands {
         #[arg(short, long)]
         text: String,
     },
+    /// Add a new summary archetype to master_resume.yaml
+    AddSummary {
+        #[arg(short, long)]
+        id: String,
+        #[arg(short, long)]
+        focus: String,
+        #[arg(short, long)]
+        text: String,
+    },
 }
 
 pub fn run() -> Result<()> {
@@ -333,6 +350,7 @@ pub fn run() -> Result<()> {
             lead_skills,
             bullet_tags,
             max_bullets_per_role,
+            exclude_bullets,
             experience_summaries,
             include_projects,
             exclude_projects,
@@ -361,6 +379,7 @@ pub fn run() -> Result<()> {
                 lead_skills: lead_skills.as_deref(),
                 bullet_tags: bullet_tags.as_deref(),
                 max_bullets_per_role,
+                exclude_bullets: exclude_bullets.as_deref(),
                 experience_summaries: experience_summaries.as_deref(),
                 include_projects: include_projects.as_deref(),
                 exclude_projects: exclude_projects.as_deref(),
@@ -430,6 +449,7 @@ pub fn run() -> Result<()> {
             lead_skills,
             bullet_tags,
             max_bullets_per_role,
+            exclude_bullets,
             experience_summaries,
             include_projects,
             exclude_projects,
@@ -451,6 +471,7 @@ pub fn run() -> Result<()> {
                 lead_skills: lead_skills.as_deref(),
                 bullet_tags: bullet_tags.as_deref(),
                 max_bullets_per_role,
+                exclude_bullets: exclude_bullets.as_deref(),
                 experience_summaries: experience_summaries.as_deref(),
                 include_projects: include_projects.as_deref(),
                 exclude_projects: exclude_projects.as_deref(),
@@ -601,6 +622,7 @@ pub fn run() -> Result<()> {
             SkillSubcommands::Remove { skill, category } => handle_skill_remove(&skill, category.as_deref())?,
             SkillSubcommands::AddCategory { name, skills } => handle_add_category(&name, skills.as_deref())?,
             SkillSubcommands::AddBullet { company, tags, text } => handle_add_bullet(&company, &tags, &text)?,
+            SkillSubcommands::AddSummary { id, focus, text } => handle_add_summary(&id, &focus, &text)?,
         },
     }
 
