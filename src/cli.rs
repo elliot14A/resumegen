@@ -2,7 +2,7 @@ use crate::check::{do_check, DocType};
 use crate::compile::do_compile;
 use crate::init::do_init;
 use crate::models::LedgerEntry;
-use crate::render::do_render;
+use crate::render::{do_render, RenderOptions};
 use crate::skill::{
     handle_add_bullet, handle_add_category, handle_skill_add, handle_skill_list,
     handle_skill_remove,
@@ -56,17 +56,49 @@ pub enum Commands {
         #[arg(short, long, default_value = "master_resume.yaml")]
         master: PathBuf,
 
-        /// Summary archetype ID
+        /// Summary archetype ID from summary_bank
         #[arg(long)]
         summary_id: Option<String>,
+
+        /// Direct custom summary text override
+        #[arg(long)]
+        summary: Option<String>,
 
         /// Comma-separated list of skills to prioritize in Languages
         #[arg(long)]
         lead_skills: Option<String>,
 
-        /// Company notes string or hook intro
+        /// Comma-separated tags to prioritize relevant experience bullets (e.g. "backend,go,scale" or "frontend,typescript")
+        #[arg(long)]
+        bullet_tags: Option<String>,
+
+        /// Maximum bullets to include per role (default: all matching)
+        #[arg(long)]
+        max_bullets_per_role: Option<usize>,
+
+        /// Comma-separated project IDs to explicitly include (e.g. "fastkv,abel")
+        #[arg(long)]
+        include_projects: Option<String>,
+
+        /// Comma-separated project IDs to exclude from output
+        #[arg(long)]
+        exclude_projects: Option<String>,
+
+        /// Comma-separated skill category names to include
+        #[arg(long)]
+        include_categories: Option<String>,
+
+        /// Comma-separated skill category names to exclude
+        #[arg(long)]
+        exclude_categories: Option<String>,
+
+        /// Company notes string or tailored cover letter opening hook
         #[arg(long)]
         company_notes: Option<String>,
+
+        /// Tailored cover letter technical body narrative
+        #[arg(long)]
+        cover_body: Option<String>,
 
         /// Add relocation line and Blue Card sponsorship clause
         #[arg(long, default_value_t = true)]
@@ -111,13 +143,45 @@ pub enum Commands {
         #[arg(long)]
         summary_id: Option<String>,
 
+        /// Direct custom summary override
+        #[arg(long)]
+        summary: Option<String>,
+
         /// Leading skills
         #[arg(long)]
         lead_skills: Option<String>,
 
+        /// Comma-separated bullet tags to prioritize
+        #[arg(long)]
+        bullet_tags: Option<String>,
+
+        /// Maximum bullets per role
+        #[arg(long)]
+        max_bullets_per_role: Option<usize>,
+
+        /// Included project IDs
+        #[arg(long)]
+        include_projects: Option<String>,
+
+        /// Excluded project IDs
+        #[arg(long)]
+        exclude_projects: Option<String>,
+
+        /// Included skill categories
+        #[arg(long)]
+        include_categories: Option<String>,
+
+        /// Excluded skill categories
+        #[arg(long)]
+        exclude_categories: Option<String>,
+
         /// Company notes
         #[arg(long)]
         company_notes: Option<String>,
+
+        /// Custom cover letter body
+        #[arg(long)]
+        cover_body: Option<String>,
 
         /// Relocation toggle
         #[arg(long, default_value_t = true)]
@@ -257,8 +321,16 @@ pub fn run() -> Result<()> {
             location,
             master,
             summary_id,
+            summary,
             lead_skills,
+            bullet_tags,
+            max_bullets_per_role,
+            include_projects,
+            exclude_projects,
+            include_categories,
+            exclude_categories,
             company_notes,
+            cover_body,
             relocation,
             relocation_target,
             output_dir,
@@ -270,18 +342,26 @@ pub fn run() -> Result<()> {
 
             // Step 1: Render
             println!("\n{} Step 1: Rendering LaTeX sources...", "[1/4]".bold());
-            let (resume_tex, cover_tex) = do_render(
-                &company,
-                &role,
-                &location,
-                &master,
-                summary_id.as_deref(),
-                lead_skills.as_deref(),
-                company_notes.as_deref(),
+            let (resume_tex, cover_tex) = do_render(RenderOptions {
+                company: &company,
+                role: &role,
+                location: &location,
+                master_path: &master,
+                summary_id: summary_id.as_deref(),
+                summary: summary.as_deref(),
+                lead_skills: lead_skills.as_deref(),
+                bullet_tags: bullet_tags.as_deref(),
+                max_bullets_per_role,
+                include_projects: include_projects.as_deref(),
+                exclude_projects: exclude_projects.as_deref(),
+                include_categories: include_categories.as_deref(),
+                exclude_categories: exclude_categories.as_deref(),
+                company_notes: company_notes.as_deref(),
+                cover_body: cover_body.as_deref(),
                 relocation,
-                &relocation_target,
-                &output_dir,
-            )?;
+                relocation_target: &relocation_target,
+                output_dir: &output_dir,
+            })?;
             println!("  [OK] Rendered {}", resume_tex.display());
             println!("  [OK] Rendered {}", cover_tex.display());
 
@@ -336,24 +416,40 @@ pub fn run() -> Result<()> {
             location,
             master,
             summary_id,
+            summary,
             lead_skills,
+            bullet_tags,
+            max_bullets_per_role,
+            include_projects,
+            exclude_projects,
+            include_categories,
+            exclude_categories,
             company_notes,
+            cover_body,
             relocation,
             relocation_target,
             output_dir,
         } => {
-            let (r, c) = do_render(
-                &company,
-                &role,
-                &location,
-                &master,
-                summary_id.as_deref(),
-                lead_skills.as_deref(),
-                company_notes.as_deref(),
+            let (r, c) = do_render(RenderOptions {
+                company: &company,
+                role: &role,
+                location: &location,
+                master_path: &master,
+                summary_id: summary_id.as_deref(),
+                summary: summary.as_deref(),
+                lead_skills: lead_skills.as_deref(),
+                bullet_tags: bullet_tags.as_deref(),
+                max_bullets_per_role,
+                include_projects: include_projects.as_deref(),
+                exclude_projects: exclude_projects.as_deref(),
+                include_categories: include_categories.as_deref(),
+                exclude_categories: exclude_categories.as_deref(),
+                company_notes: company_notes.as_deref(),
+                cover_body: cover_body.as_deref(),
                 relocation,
-                &relocation_target,
-                &output_dir,
-            )?;
+                relocation_target: &relocation_target,
+                output_dir: &output_dir,
+            })?;
             println!("{} Rendered resume LaTeX -> {}", "[OK]".green().bold(), r.display());
             println!("{} Rendered cover letter LaTeX -> {}", "[OK]".green().bold(), c.display());
         }

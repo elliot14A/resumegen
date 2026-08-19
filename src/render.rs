@@ -1,7 +1,29 @@
-use crate::models::MasterResume;
+use crate::models::{BulletItem, MasterResume};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+#[derive(Debug, Clone)]
+pub struct RenderOptions<'a> {
+    pub company: &'a str,
+    pub role: &'a str,
+    pub location: &'a str,
+    pub master_path: &'a Path,
+    pub summary_id: Option<&'a str>,
+    pub summary: Option<&'a str>,
+    pub lead_skills: Option<&'a str>,
+    pub bullet_tags: Option<&'a str>,
+    pub max_bullets_per_role: Option<usize>,
+    pub include_projects: Option<&'a str>,
+    pub exclude_projects: Option<&'a str>,
+    pub include_categories: Option<&'a str>,
+    pub exclude_categories: Option<&'a str>,
+    pub company_notes: Option<&'a str>,
+    pub cover_body: Option<&'a str>,
+    pub relocation: bool,
+    pub relocation_target: &'a str,
+    pub output_dir: &'a Path,
+}
 
 pub fn escape_latex(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 16);
@@ -82,43 +104,32 @@ pub fn resolve_reference_cover_letter_path(explicit: Option<&Path>) -> PathBuf {
     PathBuf::from(".agents/skills/resume-cover-letter-generator/assets/reference_cover_letter.tex")
 }
 
-pub fn do_render(
-    company: &str,
-    role: &str,
-    location: &str,
-    master_path: &Path,
-    summary_id: Option<&str>,
-    lead_skills: Option<&str>,
-    company_notes: Option<&str>,
-    relocation: bool,
-    relocation_target: &str,
-    output_dir: &Path,
-) -> Result<(PathBuf, PathBuf)> {
-    let resolved_path = resolve_master_resume_path(Some(master_path));
+pub fn do_render(opts: RenderOptions) -> Result<(PathBuf, PathBuf)> {
+    let resolved_path = resolve_master_resume_path(Some(opts.master_path));
     let master_content = fs::read_to_string(&resolved_path)
         .with_context(|| format!("Failed to read master resume at {}", resolved_path.display()))?;
     let master: MasterResume = serde_yaml::from_str(&master_content)
         .with_context(|| "Failed to parse YAML in master resume")?;
 
-    fs::create_dir_all(output_dir)?;
+    fs::create_dir_all(opts.output_dir)?;
     let candidate_slug = sanitize_slug(&master.candidate.name);
-    let company_slug = sanitize_slug(company);
-    let resume_tex_path = output_dir.join(format!("{}_resume_{}.tex", candidate_slug, company_slug));
-    let cover_tex_path = output_dir.join(format!("{}_cover_letter_{}.tex", candidate_slug, company_slug));
+    let company_slug = sanitize_slug(opts.company);
+    let resume_tex_path = opts.output_dir.join(format!("{}_resume_{}.tex", candidate_slug, company_slug));
+    let cover_tex_path = opts.output_dir.join(format!("{}_cover_letter_{}.tex", candidate_slug, company_slug));
 
     let cand = &master.candidate;
     let name_upper = cand.name.to_uppercase();
-    let role_esc = escape_latex(role);
+    let role_esc = escape_latex(opts.role);
 
     // Dynamic relocation determination
-    let is_reloc_enabled = relocation
+    let is_reloc_enabled = opts.relocation
         || cand.relocation.as_ref().map_or(false, |r| r.enabled);
 
     let reloc_target = cand
         .relocation
         .as_ref()
         .and_then(|r| r.target.as_deref().or(r.default_target.as_deref()))
-        .unwrap_or(relocation_target);
+        .unwrap_or(opts.relocation_target);
 
     let reloc_str = if is_reloc_enabled {
         if let Some(ref tag) = cand.relocation.as_ref().and_then(|r| r.header_tag.as_deref()) {
@@ -130,15 +141,44 @@ pub fn do_render(
         String::new()
     };
 
-    let summary_text = if let Some(s_id) = summary_id {
-        master.summary_bank.iter().find(|s| s.id == s_id).map(|s| s.text.as_str())
+    // 1. Summary selection or direct override
+    let summary_text = if let Some(sum) = opts.summary {
+        sum
+    } else if let Some(s_id) = opts.summary_id {
+        master.summary_bank.iter().find(|s| s.id == s_id).map(|s| s.text.as_str()).unwrap_or("")
     } else {
-        None
-    }.unwrap_or_else(|| {
         master.summary_bank.first().map(|s| s.text.as_str()).unwrap_or("")
-    });
+    };
 
     let summary_esc = escape_latex(summary_text);
+
+    // 2. Experience & Bullet Filtering/Prioritization
+    let target_tags: Vec<String> = opts.bullet_tags
+        .map(|t| t.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect())
+        .unwrap_or_default();
+
+    let filter_and_prioritize_bullets = |bullets: &[BulletItem]| -> Vec<BulletItem> {
+        let mut result = bullets.to_vec();
+        if !target_tags.is_empty() {
+            let mut matched = Vec::new();
+            let mut others = Vec::new();
+            for b in result {
+                let has_match = b.tags.iter().any(|t| target_tags.iter().any(|tt| t.eq_ignore_ascii_case(tt)))
+                    || target_tags.iter().any(|tt| b.text.to_lowercase().contains(tt));
+                if has_match {
+                    matched.push(b);
+                } else {
+                    others.push(b);
+                }
+            }
+            matched.extend(others);
+            result = matched;
+        }
+        if let Some(max_b) = opts.max_bullets_per_role {
+            result.truncate(max_b);
+        }
+        result
+    };
 
     let mut exp_latex = String::new();
     for exp in &master.experience {
@@ -151,6 +191,7 @@ pub fn do_render(
         }
 
         if exp.roles_history.is_empty() {
+            let tailored_bullets = filter_and_prioritize_bullets(&exp.bullets);
             exp_latex.push_str(&format!(
                 "\\entryheader{{{}}}{{{}}}{{{}}}{{}}\n\\begin{{itemize}}\n",
                 escape_latex(&exp.company),
@@ -158,7 +199,7 @@ pub fn do_render(
                 loc_rendered
             ));
 
-            for bullet in &exp.bullets {
+            for bullet in &tailored_bullets {
                 exp_latex.push_str(&format!("  \\item {}\n", escape_latex(&bullet.text)));
             }
             exp_latex.push_str("\\end{itemize}\n\n");
@@ -171,12 +212,13 @@ pub fn do_render(
             ));
 
             for sub in &exp.roles_history {
+                let tailored_bullets = filter_and_prioritize_bullets(&sub.bullets);
                 exp_latex.push_str(&format!(
                     "\\subentryheader{{{}}}{{{}}}\n\\begin{{itemize}}\n",
                     escape_latex(&sub.role),
                     escape_latex(&sub.dates)
                 ));
-                for bullet in &sub.bullets {
+                for bullet in &tailored_bullets {
                     exp_latex.push_str(&format!("  \\item {}\n", escape_latex(&bullet.text)));
                 }
                 exp_latex.push_str("\\end{itemize}\n\n");
@@ -184,8 +226,24 @@ pub fn do_render(
         }
     }
 
+    // 3. Projects Selection & Filtering
+    let mut projects_to_render = master.projects.clone();
+    if let Some(inc) = opts.include_projects {
+        let inc_list: Vec<&str> = inc.split(',').map(|s| s.trim()).collect();
+        let mut filtered = Vec::new();
+        for id in inc_list {
+            if let Some(p) = master.projects.iter().find(|p| p.id.eq_ignore_ascii_case(id) || p.name.eq_ignore_ascii_case(id)) {
+                filtered.push(p.clone());
+            }
+        }
+        projects_to_render = filtered;
+    } else if let Some(exc) = opts.exclude_projects {
+        let exc_list: Vec<&str> = exc.split(',').map(|s| s.trim()).collect();
+        projects_to_render.retain(|p| !exc_list.iter().any(|e| p.id.eq_ignore_ascii_case(e) || p.name.eq_ignore_ascii_case(e)));
+    }
+
     let mut proj_latex = String::new();
-    for proj in &master.projects {
+    for proj in &projects_to_render {
         let repo_display_str = proj.repo_display.as_deref().or_else(|| {
             proj.repo_url.as_deref().map(|u| u.trim_start_matches("https://"))
         });
@@ -205,10 +263,23 @@ pub fn do_render(
         ));
     }
 
-    let mut skills_latex = String::new();
+    // 4. Skills Categories & Prioritization
     let mut categories = master.skills.categories.clone();
+    if let Some(inc) = opts.include_categories {
+        let inc_list: Vec<&str> = inc.split(',').map(|s| s.trim()).collect();
+        let mut filtered = Vec::new();
+        for name in inc_list {
+            if let Some(c) = master.skills.categories.iter().find(|c| c.name.eq_ignore_ascii_case(name)) {
+                filtered.push(c.clone());
+            }
+        }
+        categories = filtered;
+    } else if let Some(exc) = opts.exclude_categories {
+        let exc_list: Vec<&str> = exc.split(',').map(|s| s.trim()).collect();
+        categories.retain(|c| !exc_list.iter().any(|e| c.name.eq_ignore_ascii_case(e)));
+    }
 
-    if let Some(lead) = lead_skills {
+    if let Some(lead) = opts.lead_skills {
         let lead_list: Vec<&str> = lead.split(',').map(|s| s.trim()).collect();
         for cat in &mut categories {
             let mut prioritized = Vec::new();
@@ -225,6 +296,7 @@ pub fn do_render(
         }
     }
 
+    let mut skills_latex = String::new();
     for cat in &categories {
         skills_latex.push_str(&format!(
             "  \\item \\textbf{{{}:}} {}\n",
@@ -365,8 +437,8 @@ r#"\documentclass[10pt,a4paper]{{article}}
     );
 
     // Cover Letter Generation
-    let company_esc = escape_latex(company);
-    let loc_esc = escape_latex(location);
+    let company_esc = escape_latex(opts.company);
+    let loc_esc = escape_latex(opts.location);
 
     let reloc_header = if is_reloc_enabled {
         if let Some(ref tag) = cand.relocation.as_ref().and_then(|r| r.header_tag.as_deref()) {
@@ -401,10 +473,16 @@ r#"\documentclass[10pt,a4paper]{{article}}
         format!("I am based in {} and available to work across relevant time zones.", escape_latex(&cand.location))
     };
 
-    let intro_paragraph = if let Some(notes) = company_notes {
+    let intro_paragraph = if let Some(notes) = opts.company_notes {
         escape_latex(notes)
     } else {
         format!("{} has established a high standard for mission-critical software. Having engineered production backend services, developer tooling, and access-control architectures, I would welcome the opportunity to join {} as a {}.", company_esc, company_esc, role_esc)
+    };
+
+    let body_paragraph_1 = if let Some(body) = opts.cover_body {
+        escape_latex(body)
+    } else {
+        "At my venture and prior engineering roles, I designed access-control architectures and high-throughput data backends from the ground up. To eliminate security workarounds, request authorization contexts resolve directly within the execution path before any storage operation proceeds. Each credential binds to a verifiable contract with zero privilege escalation paths, emitting structured audit logs and deterministic error responses.".to_string()
     };
 
     let cover_tex = format!(
@@ -463,7 +541,7 @@ Dear {} team,
 
 {}
 
-At my venture and prior engineering roles, I designed access-control architectures and high-throughput data backends from the ground up. To eliminate security workarounds, request authorization contexts resolve directly within the execution path before any storage operation proceeds. Each credential binds to a verifiable contract with zero privilege escalation paths, emitting structured audit logs and deterministic error responses.
+{}
 
 In open-source software and production services, I led backend engineering across distributed query platforms, optimizing schema indexing and profiling bottlenecks to reduce query latency from multiple seconds to sub-second responses. I structured service cores so storage and transport could evolve independently, and set the API and testing standards across multiple codebases.
 
@@ -496,6 +574,7 @@ Best regards,\\[2pt]
         role_esc,
         company_esc,
         intro_paragraph,
+        body_paragraph_1,
         reloc_paragraph,
         cand.links.github,
         cand.links.github_display,

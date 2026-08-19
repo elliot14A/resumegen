@@ -9,7 +9,7 @@
 
 `resumegen` is an **agent-first toolchain** designed to give coding agents a deterministic, zero-hallucination runtime for producing tailored resumes and matching cover letters.
 
-Instead of having LLMs directly write raw LaTeX or unstructured markdown (which frequently causes compilation errors, formatting drift, page overflow, and AI slop), agents invoke `resumegen` to render, compile, validate against a strict 10-point quality gate, and track applications across a unified dual ledger.
+**Core Philosophy**: Empower the agent with maximum creative freedom to tailor every section (summary, lead skills, experience bullets, and project curation) while strictly enforcing deterministic quality invariants and zero hallucinations.
 
 All candidate-specific build outputs and application ledgers are automatically stored in the **`.resumegen/`** directory.
 
@@ -18,6 +18,7 @@ All candidate-specific build outputs and application ledgers are automatically s
 ## Key Capabilities for Agents
 
 - **Deterministic Facts Bank (`master_resume.yaml`)**: Single source of truth for candidate career history, metrics, tech stacks, open-source projects, and skills.
+- **Granular Section Customization**: Tailor summaries (`--summary`), front-run languages (`--lead-skills`), filter/prioritize bullets by tags (`--bullet-tags`), curate relevant projects (`--include-projects` / `--exclude-projects`), and filter skill categories (`--include-categories`).
 - **Customizable Relocation & Work Authorization**: Configure candidate-specific relocation statements, header tags, work authorization status, or disable relocation completely.
 - **Configurable Quality Invariants (`custom_checks`)**: Tailor institution verification, page budget ceilings, and custom banned word filters directly in YAML.
 - **ATS-Guaranteed Single-Column LaTeX**: Dense single-column layout, standard UTF-8/T1 font encodings, active hyperlinks, zero multi-column parse traps.
@@ -70,83 +71,25 @@ sudo cp target/release/resumegen /usr/local/bin/
 
 ---
 
-## Declarative Facts Bank (`master_resume.yaml`)
+## Agent Turnkey Tailoring & Build
 
-Candidate career facts, relocation preferences, and quality checks are declared in `master_resume.yaml`:
-
-```yaml
-candidate:
-  name: "Jane Doe"
-  title: "Senior Backend Engineer"
-  location: "Berlin, Germany"
-  email: "jane.doe@example.com"
-  phone: "+49 151 12345678"
-  links:
-    portfolio: "https://janedoe.dev"
-    portfolio_display: "janedoe.dev"
-    github: "https://github.com/janedoe"
-    github_display: "github.com/janedoe"
-    linkedin: "https://linkedin.com/in/janedoe"
-    linkedin_display: "linkedin.com/in/janedoe"
-  
-  # OPTIONAL: Relocation, Work Authorization & Custom Closing Statements
-  relocation:
-    enabled: false                                 # Set true if actively seeking relocation
-    target: "Berlin, Germany"
-    header_tag: "Open to relocation to Germany"    # Custom text for header line
-    custom_statement: "I am based in Berlin and eligible to work in the EU without visa sponsorship."
-    work_authorization: "EU Citizen"
-    spoken_languages: "English (Fluent) · German (B2)"
-
-# OPTIONAL: Quality Gate Overrides
-custom_checks:
-  verify_institution: true                         # Enable/disable education institution match
-  max_resume_pages: 2                              # Resume page ceiling
-  max_cover_letter_pages: 1                        # Cover letter page ceiling
-  banned_words:                                    # Custom banned filler words
-    - "genuinely"
-    - "honestly"
-    - "actually"
-    - "thrilled"
-    - "passionate"
-    - "excited"
-    - "leverage"
-```
-
----
-
-## Agent 0-to-1 Workflow
-
-### 1. Initialize Workspace (If Not Already Present)
-```bash
-resumegen init --path .
-```
-This generates:
-- `master_resume.yaml` (starter candidate facts bank)
-- `.resumegen/resumes/` (sandboxed output directory)
-
-### 2. Verify Past Applications
-Before tailoring for a company, the agent queries the application history:
-```bash
-resumegen track query "Stripe"
-```
-
-### 3. One-Shot Turnkey Generation
-The agent triggers the end-to-end pipeline with target parameters from the JD:
 ```bash
 resumegen build \
   --company "Ory" \
-  --role "Senior Software Engineer" \
+  --role "Senior Backend Engineer" \
   --location "Munich, Germany / Remote" \
-  --summary-id "go_iam_focus" \
-  --lead-skills "Go,Rust,TypeScript,PostgreSQL,Docker" \
-  --relocation-target "Germany"
+  --summary "Senior backend engineer specializing in Go microservices, access control governance, and low-latency PostgreSQL profiling." \
+  --lead-skills "Go,PostgreSQL,Docker,Kubernetes,TypeScript" \
+  --bullet-tags "backend,postgres,scale,iam" \
+  --max-bullets-per-role 4 \
+  --include-projects "abel,ruspie,elliot14a" \
+  --company-notes "Ory has established the open-source standard for identity, authentication, and zero-trust authorization systems."
 ```
 
 Output:
 ```
 Starting Turnkey Build Pipeline...
-  Target: Ory | Senior Software Engineer (Munich, Germany / Remote)
+  Target: Ory | Senior Backend Engineer (Munich, Germany / Remote)
 
 [1/4] Step 1: Rendering LaTeX sources...
   [OK] Rendered .resumegen/resumes/jane_doe_resume_ory.tex
@@ -154,13 +97,13 @@ Starting Turnkey Build Pipeline...
 
 [2/4] Step 2: Compiling to PDF via tectonic...
 [INFO] Compiling .resumegen/resumes/jane_doe_resume_ory.tex with tectonic...
-[PASS] Successfully compiled to .resumegen/resumes/jane_doe_resume_ory.pdf (41726 bytes)
+[PASS] Successfully compiled to .resumegen/resumes/jane_doe_resume_ory.pdf (40112 bytes)
 [INFO] Compiling .resumegen/resumes/jane_doe_cover_letter_ory.tex with tectonic...
-[PASS] Successfully compiled to .resumegen/resumes/jane_doe_cover_letter_ory.pdf (20679 bytes)
+[PASS] Successfully compiled to .resumegen/resumes/jane_doe_cover_letter_ory.pdf (18947 bytes)
 
 [3/4] Step 3: Validating ATS & wording guardrails...
 [PASS] PDF Format Header: Valid PDF header found
-[PASS] Text Selectability: Extracted 6947 selectable characters
+[PASS] Text Selectability: Extracted 5262 selectable characters
 [PASS] Page Count Constraint: Document has 2 page(s) (Max allowed: 2)
 [PASS] No Banned AI Slop: No banned filler words
 [PASS] No Duration Language: No duration phrases found
@@ -174,7 +117,7 @@ Starting Turnkey Build Pipeline...
 Turnkey Build COMPLETE!
   Resume PDF       : .resumegen/resumes/jane_doe_resume_ory.pdf
   Cover Letter PDF : .resumegen/resumes/jane_doe_cover_letter_ory.pdf
-  Ledger Updated   : 204 entries indexed across repositories
+  Ledger Updated   : 215 entries indexed across repositories
 ```
 
 ---
@@ -188,55 +131,28 @@ resumegen <COMMAND>
 | Command | Description |
 | :--- | :--- |
 | **`init`** | Initialize workspace with starter templates and `.resumegen/` directory |
-| **`build`** | Turnkey 0-to-1 pipeline: Render -> Compile -> Check -> Track (outputs to `.resumegen/resumes/`) |
-| **`render`** | Render tailored `.tex` sources from `master_resume.yaml` into `.resumegen/resumes/` |
+| **`build`** | Turnkey 0-to-1 pipeline with section customization: Render -> Compile -> Check -> Track |
+| **`render`** | Render tailored `.tex` sources from `master_resume.yaml` with custom flags into `.resumegen/resumes/` |
 | **`compile`** | Compile `.tex` documents to PDF via Tectonic |
 | **`check`** | Run 10-point ATS, page count, anti-slop, and anti-plagiarism verification |
 | **`track`** | Sync dual-ledgers (`.resumegen/ledger.csv`), query history, and list past applications |
 | **`skill`** | Declaratively query and update skills/bullets in `master_resume.yaml` |
 
-### Application Tracking (`track`)
-```bash
-# Query application history for a specific company
-resumegen track query "Stripe"
+### Granular Section Customization Options (`build` & `render`)
 
-# List recent applications
-resumegen track list --limit 15
-
-# View aggregate stats
-resumegen track stats
-
-# Resynchronize dual ledgers
-resumegen track sync
-```
-
-### Declarative Skill Management (`skill`)
-```bash
-# List all skill categories
-resumegen skill list
-
-# Add a skill to an existing category
-resumegen skill add --category "Languages" --skill "Zig"
-
-# Create a new skill category
-resumegen skill add-category "Cloud & Orchestration" --skills "Kubernetes, Terraform, AWS"
-
-# Add an experience bullet
-resumegen skill add-bullet --company acme_corp --tags scale,postgres \
-  --text "Optimized PostgreSQL connection pool sizing, reducing query latency by 40%."
-```
-
-### Invariant & Compliance Checking (`check`)
-```bash
-# Validate a resume PDF against ATS rules & master_resume.yaml
-resumegen check .resumegen/resumes/jane_doe_resume_google.pdf \
-  --tex .resumegen/resumes/jane_doe_resume_google.tex
-
-# Validate a cover letter with anti-plagiarism guardrails against a reference baseline
-resumegen check .resumegen/resumes/jane_doe_cover_letter_google.pdf \
-  --tex .resumegen/resumes/jane_doe_cover_letter_google.tex \
-  --reference .agents/skills/resume-cover-letter-generator/assets/reference_cover_letter.tex
-```
+| Flag | Type | Description |
+| :--- | :--- | :--- |
+| `--summary` | String | Direct custom summary paragraph override |
+| `--summary-id` | String | Select summary archetype from `summary_bank` |
+| `--lead-skills` | CSV | Skills to front-run in Languages |
+| `--bullet-tags` | CSV | Comma-separated tags to prioritize matching experience bullets (e.g. `backend,postgres` vs `frontend,typescript`) |
+| `--max-bullets-per-role` | Integer | Cap bullets per role to maintain tight page budget |
+| `--include-projects` | CSV | Comma-separated project IDs to include in specified order |
+| `--exclude-projects` | CSV | Comma-separated project IDs to omit |
+| `--include-categories` | CSV | Skill category names to include |
+| `--exclude-categories` | CSV | Skill category names to omit |
+| `--company-notes` | String | Tailored cover letter opening hook |
+| `--cover-body` | String | Tailored cover letter technical narrative body |
 
 ---
 
@@ -248,14 +164,15 @@ resume-builder/
 ├── src/                                       # Modular Rust CLI source code
 │   ├── main.rs                                # Application entrypoint
 │   ├── lib.rs                                 # Library root
-│   ├── cli.rs                                 # Clap CLI commands
+│   ├── cli.rs                                 # Clap CLI commands & flags
 │   ├── models.rs                              # Schema data types
-│   ├── render.rs                              # LaTeX generator
+│   ├── render.rs                              # LaTeX generator with section filtering
 │   ├── compile.rs                             # Tectonic compiler
 │   ├── check.rs                               # 10-point ATS quality gate
 │   ├── track.rs                               # Ledger manager
 │   ├── skill.rs                               # Skill matrix editor
 │   └── init.rs                                # Workspace bootstrap
+├── tests/                                     # Automated test suite (7 tests)
 ├── flake.nix                                  # Nix development shell
 ├── master_resume.example.yaml                 # Example template for candidate facts
 ├── .resumegen/                                # Sandboxed output directory (gitignored)
@@ -264,7 +181,7 @@ resume-builder/
 ├── .agents/                                   # Agent Skills standard package
 │   └── skills/
 │       └── resume-cover-letter-generator/
-│           ├── SKILL.md
+│           ├── SKILL.md                       # Canonical skill prompt & execution workflows
 │           ├── assets/
 │           │   ├── reference_resume.tex
 │           │   └── reference_cover_letter.tex
