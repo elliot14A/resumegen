@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MasterResume {
@@ -93,6 +94,8 @@ pub struct ExperienceItem {
     pub roles_history: Vec<RoleHistoryItem>,
     pub summary: Option<String>,
     #[serde(default)]
+    pub summaries: Option<BTreeMap<String, String>>,
+    #[serde(default)]
     pub bullets: Vec<BulletItem>,
 }
 
@@ -100,6 +103,10 @@ pub struct ExperienceItem {
 pub struct RoleHistoryItem {
     pub role: String,
     pub dates: String,
+    #[serde(default)]
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub summaries: Option<BTreeMap<String, String>>,
     #[serde(default)]
     pub bullets: Vec<BulletItem>,
 }

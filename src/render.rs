@@ -1,5 +1,6 @@
 use crate::models::{BulletItem, MasterResume};
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +15,7 @@ pub struct RenderOptions<'a> {
     pub lead_skills: Option<&'a str>,
     pub bullet_tags: Option<&'a str>,
     pub max_bullets_per_role: Option<usize>,
+    pub experience_summaries: Option<&'a str>,
     pub include_projects: Option<&'a str>,
     pub exclude_projects: Option<&'a str>,
     pub include_categories: Option<&'a str>,
@@ -157,6 +159,18 @@ pub fn do_render(opts: RenderOptions) -> Result<(PathBuf, PathBuf)> {
         .map(|t| t.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect())
         .unwrap_or_default();
 
+    let custom_exp_summaries: HashMap<String, String> = opts.experience_summaries
+        .map(|s| {
+            let mut map = HashMap::new();
+            for part in s.split(';') {
+                if let Some((k, v)) = part.split_once(':') {
+                    map.insert(k.trim().to_lowercase(), v.trim().to_string());
+                }
+            }
+            map
+        })
+        .unwrap_or_default();
+
     let filter_and_prioritize_bullets = |bullets: &[BulletItem]| -> Vec<BulletItem> {
         let mut result = bullets.to_vec();
         if !target_tags.is_empty() {
@@ -190,13 +204,36 @@ pub fn do_render(opts: RenderOptions) -> Result<(PathBuf, PathBuf)> {
             }
         }
 
+        // Determine experience summary (from CLI overrides, or YAML focus/default)
+        let exp_summary_text = custom_exp_summaries
+            .get(&exp.id.to_lowercase())
+            .or_else(|| custom_exp_summaries.get(&exp.company.to_lowercase()))
+            .map(|s| s.as_str())
+            .or_else(|| {
+                if let Some(ref summaries) = exp.summaries {
+                    for tag in &target_tags {
+                        if let Some(s) = summaries.get(tag) {
+                            return Some(s.as_str());
+                        }
+                    }
+                }
+                exp.summary.as_deref()
+            });
+
+        let exp_summary_latex = if let Some(st) = exp_summary_text {
+            format!("{{\\small\\textit{{{}}}}}\\\\[2pt]\n", escape_latex(st))
+        } else {
+            String::new()
+        };
+
         if exp.roles_history.is_empty() {
             let tailored_bullets = filter_and_prioritize_bullets(&exp.bullets);
             exp_latex.push_str(&format!(
-                "\\entryheader{{{}}}{{{}}}{{{}}}{{}}\n\\begin{{itemize}}\n",
+                "\\entryheader{{{}}}{{{}}}{{{}}}{{}}\n{}\n\\begin{{itemize}}\n",
                 escape_latex(&exp.company),
                 escape_latex(&exp.dates),
-                loc_rendered
+                loc_rendered,
+                exp_summary_latex
             ));
 
             for bullet in &tailored_bullets {
@@ -205,18 +242,24 @@ pub fn do_render(opts: RenderOptions) -> Result<(PathBuf, PathBuf)> {
             exp_latex.push_str("\\end{itemize}\n\n");
         } else {
             exp_latex.push_str(&format!(
-                "\\entryheader{{{}}}{{{}}}{{{}}}{{}}\n\n",
+                "\\entryheader{{{}}}{{{}}}{{{}}}{{}}\n{}\n\n",
                 escape_latex(&exp.company),
                 escape_latex(&exp.dates),
-                loc_rendered
+                loc_rendered,
+                exp_summary_latex
             ));
 
             for sub in &exp.roles_history {
+                let sub_summary_latex = sub.summary.as_deref().map(|st| {
+                    format!("{{\\small\\textit{{{}}}}}\\\\[1.5pt]\n", escape_latex(st))
+                }).unwrap_or_default();
+
                 let tailored_bullets = filter_and_prioritize_bullets(&sub.bullets);
                 exp_latex.push_str(&format!(
-                    "\\subentryheader{{{}}}{{{}}}\n\\begin{{itemize}}\n",
+                    "\\subentryheader{{{}}}{{{}}}\n{}\n\\begin{{itemize}}\n",
                     escape_latex(&sub.role),
-                    escape_latex(&sub.dates)
+                    escape_latex(&sub.dates),
+                    sub_summary_latex
                 ));
                 for bullet in &tailored_bullets {
                     exp_latex.push_str(&format!("  \\item {}\n", escape_latex(&bullet.text)));

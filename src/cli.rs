@@ -72,6 +72,10 @@ pub enum Commands {
         #[arg(long)]
         bullet_tags: Option<String>,
 
+        /// Semicolon-separated company/role experience summaries (e.g. "gaur_data:Built high-throughput Go backend;factly:Led data platform")
+        #[arg(long)]
+        experience_summaries: Option<String>,
+
         /// Maximum bullets to include per role (default: all matching)
         #[arg(long)]
         max_bullets_per_role: Option<usize>,
@@ -154,6 +158,10 @@ pub enum Commands {
         /// Comma-separated bullet tags to prioritize
         #[arg(long)]
         bullet_tags: Option<String>,
+
+        /// Semicolon-separated company/role experience summaries
+        #[arg(long)]
+        experience_summaries: Option<String>,
 
         /// Maximum bullets per role
         #[arg(long)]
@@ -325,6 +333,7 @@ pub fn run() -> Result<()> {
             lead_skills,
             bullet_tags,
             max_bullets_per_role,
+            experience_summaries,
             include_projects,
             exclude_projects,
             include_categories,
@@ -352,6 +361,7 @@ pub fn run() -> Result<()> {
                 lead_skills: lead_skills.as_deref(),
                 bullet_tags: bullet_tags.as_deref(),
                 max_bullets_per_role,
+                experience_summaries: experience_summaries.as_deref(),
                 include_projects: include_projects.as_deref(),
                 exclude_projects: exclude_projects.as_deref(),
                 include_categories: include_categories.as_deref(),
@@ -420,6 +430,7 @@ pub fn run() -> Result<()> {
             lead_skills,
             bullet_tags,
             max_bullets_per_role,
+            experience_summaries,
             include_projects,
             exclude_projects,
             include_categories,
@@ -440,6 +451,7 @@ pub fn run() -> Result<()> {
                 lead_skills: lead_skills.as_deref(),
                 bullet_tags: bullet_tags.as_deref(),
                 max_bullets_per_role,
+                experience_summaries: experience_summaries.as_deref(),
                 include_projects: include_projects.as_deref(),
                 exclude_projects: exclude_projects.as_deref(),
                 include_categories: include_categories.as_deref(),

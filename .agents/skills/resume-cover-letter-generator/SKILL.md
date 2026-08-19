@@ -142,6 +142,7 @@ Tailor every section of the document to maximize relevancy for the target JD usi
 | :--- | :--- | :--- |
 | **Summary** | Target specific domain/stack focus | `--summary "<custom_text>"` or `--summary-id "<id>"` |
 | **Languages & Skills** | Front-run primary JD language | `--lead-skills "TypeScript,JavaScript,Node.js,React..."` |
+| **Job Experience Descriptions** | Tailor company/role summary paragraphs | `--experience-summaries "gaur_data:Architected all-Rust gRPC data platform;factly:Led data platform..."` |
 | **Experience Bullets** | Prioritize bullets matching JD tags | `--bullet-tags "backend,postgres,scale"` or `frontend,react,typescript` |
 | **Role Bullet Ceiling**| Keep bullet density tight & balanced | `--max-bullets-per-role 4` |
 | **Projects Section** | Include only relevant projects | `--include-projects "fastkv,abel"` or `--exclude-projects "minitraycer"` |

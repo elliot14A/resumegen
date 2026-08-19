@@ -145,6 +145,7 @@ resumegen <COMMAND>
 | `--summary` | String | Direct custom summary paragraph override |
 | `--summary-id` | String | Select summary archetype from `summary_bank` |
 | `--lead-skills` | CSV | Skills to front-run in Languages |
+| `--experience-summaries` | Semicolon-separated | Tailor company/role summary paragraphs (e.g. `"gaur_data:Built high-throughput Go backend;factly:Led data platform"`) |
 | `--bullet-tags` | CSV | Comma-separated tags to prioritize matching experience bullets (e.g. `backend,postgres` vs `frontend,typescript`) |
 | `--max-bullets-per-role` | Integer | Cap bullets per role to maintain tight page budget |
 | `--include-projects` | CSV | Comma-separated project IDs to include in specified order |
