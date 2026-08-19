@@ -66,11 +66,7 @@ resume-builder/
    - The CLI must never hardcode candidate names, URLs, institutions, or relocation preferences.
    - All candidate metadata, custom relocation statements, work authorization, and custom quality check overrides are resolved dynamically from `master_resume.yaml`.
 
-4. **Interactive Q&A Operating Mode**:
-   - Agents using the skill never one-shot a resume. They evaluate the JD, draft a proposal (which bullets in/out, which summary, which projects), wait for human confirmation, then build.
-   - See `.agents/skills/resume-cover-letter-generator/SKILL.md` for the full workflow.
-
-5. **10-Point Quality Gate (`resumegen check`)**:
+4. **10-Point Quality Gate (`resumegen check`)**:
    - Every generated document must pass PDF selectability, page budget limits, anti-slop checks, and 8+ word anti-plagiarism checks before ledger recording.
 
 ---
