@@ -2,10 +2,10 @@
 name: resume-cover-letter-generator
 description: >-
   Generates tailored, ATS-safe LaTeX resume and cover letter PDF documents from a job description,
-  structured master resume bank (master_resume.yaml), and company notes. Enforces dense 2-page resume
-  standards, 1-page muscular cover letters, exact role-title headers, dynamic fact verification,
-  clickable repository links, zero fabricated facts, anti-slop checks, and 8+ word wording-reuse guardrails.
-  Stores all outputs in .resumegen/resumes/. Powered by the unified 'resumegen' CLI.
+  structured master resume bank (master_resume.yaml), and company notes. Enforces stack front-running,
+  critical mismatch detection gates, dense 2-page resume standards, 1-page muscular cover letters,
+  exact role-title headers, dynamic fact verification, clickable repository links, zero fabricated facts,
+  anti-slop checks, and 8+ word wording-reuse guardrails. Stores all outputs in .resumegen/resumes/.
 ---
 
 # ATS Resume & Cover Letter Generator (`resumegen`)
@@ -109,47 +109,111 @@ custom_checks:
 
 ---
 
-## 3. End-to-End Agent Workflow
+## 3. Cognitive Agent Workflow: JD Evaluation & Tailoring Pipeline
 
-### Step 1: Verify Prior Applications
-Always query if the company was already targeted:
-```bash
-resumegen track query <company>
+When a user provides a Job Description (JD) or company notes, follow this 6-step intelligent workflow:
+
+```
+[Job Description Provided]
+           │
+           ▼
+[Step 1: Ingest Candidate Facts (master_resume.yaml)]
+           │
+           ▼
+[Step 2: JD Parsing & Skillset Match Analysis]
+           │
+   ┌───────┴───────┐
+   │               │
+[Strong Match] [Critical Mismatch]
+   │               │
+   │               ▼
+   │       [Ask User: Gaps Detected. Proceed or Abort?]
+   │               │ (If Proceed)
+   └───────┬───────┘
+           │
+           ▼
+[Step 3: Stack Front-Running & Summary Selection]
+   (e.g. TypeScript lead -> front-run TS/Node, back-step Rust/Go)
+           │
+           ▼
+[Step 4: Execute Turnkey Build (resumegen build)]
+           │
+           ▼
+[Step 5: Quality Gate & Invariant Verification (resumegen check)]
+           │
+           ▼
+[Step 6: Report Match Breakdown & Deliver Document Links]
 ```
 
-### Step 2: Turnkey Build
-Execute the turnkey pipeline:
+### Step 1: Ingest Candidate Facts Bank
+Read `master_resume.yaml` (or `.resumegen/master_resume.yaml`) to understand the candidate's verified career history, strengths, summary archetypes, open-source projects, and skill matrix.
+
+### Step 2: JD Parsing & Skillset Match Analysis
+Parse the target Job Description to extract:
+1. **Target Company & Exact Role Title** (e.g. `Senior TypeScript Engineer`, `Senior Backend Engineer (Go/Rust)`).
+2. **Core Tech Stack Requirements** (e.g. TypeScript, React, Next.js, Node.js vs. Go, PostgreSQL, Kafka vs. Rust, Systems, Low Latency).
+3. **Domain & Engineering Responsibilities** (e.g. developer tooling, distributed access-control, real-time data streaming).
+4. **Location & Work Authorization Requirements** (e.g. Remote EU, Hybrid Berlin, US Citizen Only, Relocation support).
+
+#### 🚨 Critical Mismatch Evaluation Gate
+Compare the JD requirements against the candidate's verified skills:
+- **Strong Match**: The core stack overlaps directly with candidate strengths (e.g. Go, Rust, TypeScript/Node, Distributed Systems, Cloud/Nix, Databases).
+  - *Action*: Proceed immediately to Step 3 for tailored front-running.
+- **Critical Mismatch**: The JD requires mandatory expertise in technologies the candidate does NOT have in `master_resume.yaml` (e.g. 5+ years Java/Spring, Swift/iOS, Ruby on Rails, C#, Hardware design) OR strict non-relocatable local residency/clearance requirements.
+  - *Action*: **STOP AND ASK THE USER**. Prompt the candidate with a transparent gap breakdown:
+    > "I analyzed the Job Description for **[Role] at [Company]**. There are critical stack/experience mismatches:
+    > - **Required**: [e.g. 5+ years Java/Spring, AWS DynamoDB]
+    > - **Candidate Bank**: [Go, Rust, TypeScript, PostgreSQL]
+    > 
+    > Would you like me to tailor and generate anyway (framing your transferable distributed systems background), or skip this application?"
+  - Wait for candidate confirmation before proceeding.
+
+### Step 3: Stack Front-Running & Tailoring Strategy
+When tailoring for a specific job:
+1. **Front-Run the Core Language/Stack in `--lead-skills`**:
+   - **TypeScript / Frontend / Fullstack Role**:
+     - `--lead-skills "TypeScript,JavaScript,Node.js,React,Next.js,PostgreSQL,Docker"`
+     - Rust and Go take a back seat in skill ordering and bullet emphasis.
+     - Select `summary_id = "fullstack_systems_focus"` (or compose a TypeScript/developer-tooling summary).
+   - **Go / IAM / Backend Systems Role**:
+     - `--lead-skills "Go,PostgreSQL,Docker,Kubernetes,Redis,TypeScript,Rust"`
+     - Highlight Gopie query optimizations, Meterus streaming, access-control policies.
+     - Select `summary_id = "go_iam_focus"`.
+   - **Rust / Low-Latency / Data Systems Role**:
+     - `--lead-skills "Rust,Apache Arrow,DataFusion,gRPC,PostgreSQL,Go,Linux"`
+     - Highlight ruspie engine, abel parser, GaurData gRPC microservices, NixOS.
+     - Select `summary_id = "backend_systems_focus"`.
+   - **AI / Data Platform Role**:
+     - Highlight DuckDB analytical isolation, vector search, streaming LLM integrations (tagore.ai).
+
+2. **Craft Company Hook Notes (`--company-notes`)**:
+   - Write a specific, 1-2 sentence hook explaining why the candidate's exact technical background maps directly to the company's product, open-source work, or infrastructure challenges.
+
+### Step 4: Turnkey Build Execution
+Invoke `resumegen build` with the tailored parameters:
 ```bash
 resumegen build \
-  --company "Ory" \
-  --role "Senior Software Engineer" \
-  --location "Munich, Germany / Remote (Central Europe)" \
-  --summary-id "go_iam_focus" \
-  --lead-skills "Go,Rust,TypeScript,PostgreSQL,Docker" \
-  --company-notes "Ory has established the open-source standard for identity, authentication, and zero-trust authorization systems that scale cleanly across enterprise workloads."
+  --company "<Company>" \
+  --role "<Exact Role Title from JD>" \
+  --location "<Location from JD>" \
+  --summary-id "<selected_or_default_summary_id>" \
+  --lead-skills "<front_run_skills_csv>" \
+  --company-notes "<crafted_tailored_hook_notes>" \
+  --relocation <true/false> \
+  --relocation-target "<country_or_city>"
 ```
 
-### Step 3: Quality Gate Verification
-`resumegen check` automatically verifies rules against the candidate's YAML settings:
-```bash
-resumegen check .resumegen/resumes/{candidate}_resume_{company}.pdf \
-  --tex .resumegen/resumes/{candidate}_resume_{company}.tex
+### Step 5: Quality Gate & Verification Audit
+`resumegen check` automatically verifies:
+- PDF selectability (>100 characters)
+- Strict page budget (<= 2 pages resume, 1 page cover letter)
+- No banned AI fluff words
+- No duration language
+- No em dashes
+- Plagiarism guardrail against reference baseline (0 rolling 8+ word matches)
 
-resumegen check .resumegen/resumes/{candidate}_cover_letter_{company}.pdf \
-  --tex .resumegen/resumes/{candidate}_cover_letter_{company}.tex \
-  --reference .agents/skills/resume-cover-letter-generator/assets/reference_cover_letter.tex
-```
-
-### Step 4: Declarative Mutations
-To persist new skills, categories, or bullets:
-```bash
-# Add a skill
-resumegen skill add --category "Databases & Messaging" --skill "ScyllaDB"
-
-# List skills
-resumegen skill list
-
-# Add a bullet
-resumegen skill add-bullet --company acme_corp --tags rust,grpc,scale \
-  --text "Engineered tonic gRPC microservices with automated health probes and graceful degradation."
-```
+### Step 6: Presentation to User
+Present a concise report highlighting:
+- **Match Assessment & Tailoring Strategy**: What stack was front-run and why.
+- **Verification Status**: 10/10 ATS quality gate result.
+- **Generated Artifacts**: Direct links to generated `.pdf` and `.tex` documents in `.resumegen/resumes/`.
